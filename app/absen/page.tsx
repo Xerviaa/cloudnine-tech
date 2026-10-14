@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AvatarDropdown from '@/components/AvatarDropdown'
-import { JAM_KANTOR, LABEL_JAM, cekTerlambatMasuk, cekStatusKeluar } from '@/lib/config/jam-kantor'
+import { JAM_KANTOR, LABEL_JAM, cekTerlambatMasuk, cekStatusKeluar, cekStatusIstirahat } from '@/lib/config/jam-kantor'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
+
+type TipeAbsen = 'masuk' | 'keluar' | 'istirahat_mulai' | 'istirahat_selesai'
 
 type AttendanceLog = {
   id: number
-  tipe: 'masuk' | 'keluar'
+  tipe: TipeAbsen
   waktu_absen: string
   latitude: number | null
   longitude: number | null
@@ -50,7 +52,6 @@ export default function AbsenPage() {
   }, [])
 
   async function loadData(userId: string) {
-    // 1. Ambil log hari ini
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
     const { data: today } = await supabase
@@ -59,7 +60,7 @@ export default function AbsenPage() {
       .order('waktu_absen', { ascending: true })
     setTodayLogs(today || [])
 
-    // 2. Cek absen masuk kemarin yang belum ada keluar setelahnya
+    // Cek absen masuk kemarin yang belum ada keluar setelahnya
     const { data: pending } = await supabase
       .from('attendance_logs').select('*').eq('user_id', userId)
       .eq('tipe', 'masuk')
@@ -99,7 +100,7 @@ export default function AbsenPage() {
     })
   }
 
-  async function handleAbsen(tipe: 'masuk' | 'keluar', isTerlambat = false) {
+  async function handleAbsen(tipe: TipeAbsen, isTerlambat = false) {
     if (!user) return
     setLoading(true)
     setMessage('')
@@ -113,6 +114,15 @@ export default function AbsenPage() {
 
     // ===== VALIDASI JAM KANTOR (untuk absen keluar normal) =====
     if (tipe === 'keluar' && !isTerlambat) {
+      // Cek apakah masih dalam istirahat
+      const istirahatMulai = todayLogs.find((l) => l.tipe === 'istirahat_mulai')
+      const istirahatSelesai = todayLogs.find((l) => l.tipe === 'istirahat_selesai')
+      if (istirahatMulai && !istirahatSelesai) {
+        setMessage('⚠️ Anda sedang istirahat. Klik "Selesai Istirahat" dulu sebelum absen keluar.')
+        setLoading(false)
+        return
+      }
+
       const { status, menitCepat } = cekStatusKeluar(new Date())
 
       if (status === 'lewat_batas') {
@@ -169,15 +179,27 @@ export default function AbsenPage() {
       if (isTerlambat) {
         setMessage('✅ Absen keluar (terlambat) tercatat. Sekarang Anda bisa absen masuk.')
       } else if (tipe === 'masuk') {
-        // Cek apakah terlambat masuk
         const { terlambat, menit } = cekTerlambatMasuk(new Date())
         if (terlambat) {
           setMessage(`✅ Absen masuk berhasil! ⚠️ Anda terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_MASUK_BATAS}.`)
         } else {
           setMessage(`✅ Absen masuk berhasil! ${lat ? '📍 Lokasi tercatat.' : ''}`)
         }
+      } else if (tipe === 'istirahat_mulai') {
+        const { status, menit } = cekStatusIstirahat(new Date())
+        if (status === 'terlambat') {
+          setMessage(`✅ Istirahat mulai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_ISTIRAHAT_SELESAI}.`)
+        } else {
+          setMessage(`✅ Istirahat mulai tercatat. Selamat istirahat! ☕`)
+        }
+      } else if (tipe === 'istirahat_selesai') {
+        const { status, menit } = cekStatusIstirahat(new Date())
+        if (status === 'terlambat') {
+          setMessage(`✅ Istirahat selesai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_ISTIRAHAT_SELESAI}.`)
+        } else {
+          setMessage(`✅ Istirahat selesai. Selamat bekerja kembali! 💪`)
+        }
       } else {
-        // Absen keluar normal
         const { status, menitCepat } = cekStatusKeluar(new Date())
         if (status === 'pulang_cepat') {
           setMessage(`✅ Absen keluar berhasil! ⚠️ Anda pulang ${menitCepat} menit lebih awal.`)
@@ -202,19 +224,37 @@ export default function AbsenPage() {
     )
   }
 
-  // Absen masuk HARI INI (bukan yang terlambat)
+  // Ambil log berdasarkan tipe
   const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
-
-  // Absen keluar HARI INI (bukan yang terlambat dari kemarin)
   const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar' && !l.is_terlambat)
+  const istirahatMulai = todayLogs.find((l) => l.tipe === 'istirahat_mulai')
+  const istirahatSelesai = todayLogs.find((l) => l.tipe === 'istirahat_selesai')
 
   const sudahMasuk = !!jamMasuk
   const sudahKeluar = !!jamKeluar
-  const progress = (sudahMasuk ? 50 : 0) + (sudahKeluar ? 50 : 0)
+  const sedangIstirahat = !!istirahatMulai && !istirahatSelesai
+  const sudahIstirahat = !!istirahatMulai && !!istirahatSelesai
 
-  // Keterangan masuk & keluar
+  // Progress: 4 tahap (masuk, istirahat mulai, istirahat selesai, keluar)
+  const progress =
+    (sudahMasuk ? 25 : 0) +
+    (istirahatMulai ? 25 : 0) +
+    (istirahatSelesai ? 25 : 0) +
+    (sudahKeluar ? 25 : 0)
+
   const ketMasuk = getKeteranganMasuk(jamMasuk || null)
   const ketKeluar = getKeteranganKeluar(jamKeluar || null)
+  const ketIstirahatMulai = istirahatMulai ? cekStatusIstirahat(new Date(istirahatMulai.waktu_absen)) : null
+  const ketIstirahatSelesai = istirahatSelesai ? cekStatusIstirahat(new Date(istirahatSelesai.waktu_absen)) : null
+
+  const getTipeLabel = (tipe: TipeAbsen) => {
+    switch (tipe) {
+      case 'masuk': return { label: 'Masuk', color: 'text-emerald-600', bg: 'from-emerald-400 to-teal-400', icon: '→' }
+      case 'keluar': return { label: 'Keluar', color: 'text-rose-500', bg: 'from-rose-400 to-pink-400', icon: '←' }
+      case 'istirahat_mulai': return { label: 'Istirahat Mulai', color: 'text-amber-600', bg: 'from-amber-400 to-orange-400', icon: '☕' }
+      case 'istirahat_selesai': return { label: 'Istirahat Selesai', color: 'text-blue-600', bg: 'from-blue-400 to-indigo-400', icon: '💪' }
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -224,7 +264,6 @@ export default function AbsenPage() {
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl" />
       </div>
 
-      {/* Navbar */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -289,20 +328,24 @@ export default function AbsenPage() {
           </div>
         </div>
 
-                {/* Info Jam Kantor & Jam Pelayanan */}
+        {/* Info Jam Kantor & Jam Pelayanan & Jam Istirahat */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
               ⏰
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-3">
+            <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Kantor</p>
-                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Kantor</p>
+                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
-                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
+                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Istirahat</p>
+                <p className="text-xs font-bold text-amber-700">{LABEL_JAM.JAM_ISTIRAHAT}</p>
               </div>
             </div>
           </div>
@@ -345,61 +388,113 @@ export default function AbsenPage() {
               Absen Keluar (Terlambat)
             </button>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <button
-                onClick={() => handleAbsen('masuk')}
-                disabled={loading || sudahMasuk}
-                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  sudahMasuk
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                    : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                }`}
-              >
-                {sudahMasuk ? '✓ Sudah Masuk' : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 12l2 2 4-4"/>
-                      <circle cx="12" cy="12" r="10"/>
-                    </svg>
-                    Absen Masuk
-                  </>
-                )}
-              </button>
+            <div className="space-y-3">
+              {/* Baris 1: Masuk & Istirahat Mulai */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleAbsen('masuk')}
+                  disabled={loading || sudahMasuk}
+                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    sudahMasuk
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                  }`}
+                >
+                  {sudahMasuk ? '✓ Sudah Masuk' : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                      </svg>
+                      Absen Masuk
+                    </>
+                  )}
+                </button>
 
-              <button
-                onClick={() => handleAbsen('keluar')}
-                disabled={loading || sudahKeluar || !sudahMasuk}
-                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                  sudahKeluar || !sudahMasuk
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                    : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                }`}
-              >
-                {sudahKeluar ? '✓ Sudah Keluar' : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                      <polyline points="16 17 21 12 16 7"/>
-                      <line x1="21" x2="9" y1="12" y2="12"/>
-                    </svg>
-                    Absen Keluar
-                  </>
-                )}
-              </button>
+                <button
+                  onClick={() => handleAbsen('istirahat_mulai')}
+                  disabled={loading || !sudahMasuk || sudahIstirahat || sedangIstirahat}
+                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    !sudahMasuk || sudahIstirahat || sedangIstirahat
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      : 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg shadow-amber-400/30 hover:shadow-xl hover:shadow-amber-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                  }`}
+                >
+                  {sedangIstirahat ? '☕ Sedang Istirahat' : sudahIstirahat ? '✓ Sudah Istirahat' : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+                        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+                      </svg>
+                      Istirahat Mulai
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Baris 2: Istirahat Selesai & Keluar */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={() => handleAbsen('istirahat_selesai')}
+                  disabled={loading || !sedangIstirahat}
+                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    !sedangIstirahat
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      : 'bg-gradient-to-r from-blue-400 to-indigo-400 text-white shadow-lg shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                  }`}
+                >
+                  {sudahIstirahat ? '✓ Istirahat Selesai' : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 12l2 2 4-4"/>
+                        <circle cx="12" cy="12" r="10"/>
+                      </svg>
+                      Selesai Istirahat
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleAbsen('keluar')}
+                  disabled={loading || sudahKeluar || !sudahMasuk || sedangIstirahat}
+                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    sudahKeluar || !sudahMasuk || sedangIstirahat
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                  }`}
+                >
+                  {sudahKeluar ? '✓ Sudah Keluar' : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" x2="9" y1="12" y2="12"/>
+                      </svg>
+                      Absen Keluar
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Hint */}
+              {!sudahMasuk && (
+                <p className="text-xs text-slate-500 text-center">
+                  💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
+                </p>
+              )}
+              {sudahMasuk && !sudahIstirahat && !sedangIstirahat && (
+                <p className="text-xs text-amber-600 text-center font-medium">
+                  ☕ Jangan lupa istirahat jam {LABEL_JAM.JAM_ISTIRAHAT} WITA
+                </p>
+              )}
             </div>
-          )}
-
-          {!pendingLog && !sudahMasuk && (
-            <p className="text-xs text-slate-500 mt-3 text-center">
-              💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
-            </p>
           )}
 
           {message && (
             <div className={`mt-4 text-sm text-center p-3 rounded-xl font-medium border ${
               message.includes('berhasil') || message.includes('tercatat')
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : message.includes('sudah') || message.includes('Mengambil')
+                : message.includes('sudah') || message.includes('Mengambil') || message.includes('istirahat')
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
                 : 'bg-rose-50 text-rose-700 border-rose-200'
             }`}>
@@ -408,7 +503,7 @@ export default function AbsenPage() {
           )}
         </div>
 
-        {/* Kartu Ringkasan */}
+        {/* Kartu Ringkasan - 4 kartu */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200' : 'border-slate-200'}`}>
             <div className="flex items-center gap-2 mb-3">
@@ -421,14 +516,46 @@ export default function AbsenPage() {
               </div>
               <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
             </div>
-            <p className={`text-2xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
-              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' }) : '--:--:--'}
+            <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
+              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketMasuk && (
-              <p className={`text-[10px] mt-1 font-medium ${
-                ketMasuk.warna === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'
-              }`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
                 {ketMasuk.detail}
+              </p>
+            )}
+          </div>
+
+          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${istirahatMulai ? 'border-amber-200' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatMulai ? 'bg-gradient-to-br from-amber-400 to-orange-400' : 'bg-slate-100'}`}>
+                <span className="text-base">☕</span>
+              </div>
+              <p className="text-xs font-semibold text-slate-600">Istirahat</p>
+            </div>
+            <p className={`text-xl font-bold font-mono ${istirahatMulai ? 'text-amber-500' : 'text-slate-300'}`}>
+              {istirahatMulai ? new Date(istirahatMulai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            </p>
+            {ketIstirahatMulai && (
+              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatMulai.status === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {ketIstirahatMulai.status === 'terlambat' ? `Terlambat ${ketIstirahatMulai.menit} menit` : 'Tepat waktu'}
+              </p>
+            )}
+          </div>
+
+          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${istirahatSelesai ? 'border-blue-200' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatSelesai ? 'bg-gradient-to-br from-blue-400 to-indigo-400' : 'bg-slate-100'}`}>
+                <span className="text-base">💪</span>
+              </div>
+              <p className="text-xs font-semibold text-slate-600">Selesai Istirahat</p>
+            </div>
+            <p className={`text-xl font-bold font-mono ${istirahatSelesai ? 'text-blue-500' : 'text-slate-300'}`}>
+              {istirahatSelesai ? new Date(istirahatSelesai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+            </p>
+            {ketIstirahatSelesai && (
+              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatSelesai.status === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                {ketIstirahatSelesai.status === 'terlambat' ? `Terlambat ${ketIstirahatSelesai.menit} menit` : 'Tepat waktu'}
               </p>
             )}
           </div>
@@ -444,13 +571,11 @@ export default function AbsenPage() {
               </div>
               <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
             </div>
-            <p className={`text-2xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
-              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' }) : '--:--:--'}
+            <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
+              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketKeluar && (
-              <p className={`text-[10px] mt-1 font-medium ${
-                ketKeluar.warna === 'normal' ? 'text-emerald-600' : 'text-orange-600'
-              }`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600' : 'text-orange-600'}`}>
                 {ketKeluar.detail}
               </p>
             )}
@@ -478,24 +603,21 @@ export default function AbsenPage() {
           ) : (
             <div className="space-y-3">
               {todayLogs.map((log) => {
-                const ket = log.tipe === 'masuk'
-                  ? getKeteranganMasuk(log)
-                  : getKeteranganKeluar(log)
+                const info = getTipeLabel(log.tipe)
+                const ket = log.tipe === 'masuk' ? getKeteranganMasuk(log) :
+                            log.tipe === 'keluar' ? getKeteranganKeluar(log) :
+                            cekStatusIstirahat(new Date(log.waktu_absen))
 
                 return (
                   <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                          log.tipe === 'masuk' ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-gradient-to-br from-rose-400 to-pink-400'
-                        }`}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                            {log.tipe === 'masuk' ? <polyline points="9 11 12 14 20 6"/> : <polyline points="16 17 21 12 16 7"/>}
-                          </svg>
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br ${info.bg}`}>
+                          <span className="text-white font-bold text-lg">{info.icon}</span>
                         </div>
                         <div>
-                          <p className={`font-semibold text-sm ${log.tipe === 'masuk' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                            Absen {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
+                          <p className={`font-semibold text-sm ${info.color}`}>
+                            {info.label}
                             {log.is_terlambat && (
                               <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
                                 MENYUSUL
@@ -505,7 +627,7 @@ export default function AbsenPage() {
                           <p className="text-xs text-slate-500">
                             {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' })}
                           </p>
-                          {ket && (
+                          {ket && 'detail' in ket && (
                             <p className={`text-[10px] mt-0.5 font-medium ${
                               ket.warna === 'terlambat' ? 'text-amber-600'
                               : ket.warna === 'pulang_cepat' ? 'text-orange-600'
@@ -515,9 +637,14 @@ export default function AbsenPage() {
                               {ket.detail}
                             </p>
                           )}
+                          {ket && 'status' in ket && ket.status === 'terlambat' && (
+                            <p className="text-[10px] mt-0.5 font-medium text-amber-600">
+                              Terlambat {ket.menit} menit
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <span className={`text-lg font-bold font-mono ${log.tipe === 'masuk' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      <span className={`text-lg font-bold font-mono ${info.color}`}>
                         {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' })}
                       </span>
                     </div>

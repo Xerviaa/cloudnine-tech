@@ -23,10 +23,12 @@ type Profile = {
   kelurahan: string | null
 }
 
+type TipeAbsen = 'masuk' | 'keluar' | 'istirahat_mulai' | 'istirahat_selesai'
+
 type AttendanceLog = {
   id: number
   user_id: string
-  tipe: 'masuk' | 'keluar'
+  tipe: TipeAbsen
   waktu_absen: string
   latitude: number | null
   longitude: number | null
@@ -39,6 +41,8 @@ type UserAttendance = {
   masuk: AttendanceLog | null
   keluar: AttendanceLog | null
   menyusul: AttendanceLog | null
+  istirahatMulai: AttendanceLog | null
+  istirahatSelesai: AttendanceLog | null
   status: 'belum_absen' | 'belum_keluar' | 'lengkap' | 'lupa_absen_keluar'
 }
 
@@ -125,13 +129,14 @@ export default function AdminPage() {
       const pasangan = pairMasukKeluar(userAllLogs)
 
       const masuk = todayLogs.find((l) => l.user_id === u.id && l.tipe === 'masuk') || null
+      const istirahatMulai = todayLogs.find((l) => l.user_id === u.id && l.tipe === 'istirahat_mulai') || null
+      const istirahatSelesai = todayLogs.find((l) => l.user_id === u.id && l.tipe === 'istirahat_selesai') || null
 
       let keluar: AttendanceLog | null = null
       let menyusul: AttendanceLog | null = null
 
       if (masuk) {
         const pasanganLog = pasangan.get(masuk.id) || null
-
         if (pasanganLog) {
           if (!pasanganLog.is_terlambat) {
             keluar = pasanganLog
@@ -147,7 +152,7 @@ export default function AdminPage() {
       else if (masuk) status = 'belum_keluar'
       else status = 'belum_absen'
 
-      return { user: u, masuk, keluar, menyusul, status }
+      return { user: u, masuk, keluar, menyusul, istirahatMulai, istirahatSelesai, status }
     })
 
     setAttendance(grouped)
@@ -271,27 +276,46 @@ export default function AdminPage() {
         'Akurasi (m)',
       ]
 
+      const tipeLabel = (tipe: string) => {
+        switch (tipe) {
+          case 'masuk': return 'Masuk'
+          case 'keluar': return 'Keluar'
+          case 'istirahat_mulai': return 'Istirahat Mulai'
+          case 'istirahat_selesai': return 'Istirahat Selesai'
+          default: return tipe
+        }
+      }
+
       const rows = logsData.map((log: any) => {
         const dt = new Date(log.waktu_absen)
-        const logData = {
-          id: log.id,
-          tipe: log.tipe,
-          waktu_absen: log.waktu_absen,
-          is_terlambat: log.is_terlambat,
+        let keterangan = '-'
+        if (log.tipe === 'masuk') {
+          const k = getKeteranganMasuk(log)
+          keterangan = k?.detail || '-'
+        } else if (log.tipe === 'keluar') {
+          const k = getKeteranganKeluar(log)
+          keterangan = k?.detail || '-'
+        } else {
+          // Istirahat: cek telat dari jam 13:00
+          const wita = dt.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false })
+          const [h, m] = wita.split('.').map(Number)
+          const menit = h * 60 + m
+          const batas = 13 * 60 // 13:00
+          if (menit > batas) {
+            keterangan = `Terlambat ${menit - batas} menit`
+          } else {
+            keterangan = 'Tepat waktu'
+          }
         }
-        const keterangan =
-          log.tipe === 'masuk'
-            ? getKeteranganMasuk(logData)
-            : getKeteranganKeluar(logData)
 
         return [
           dt.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }),
           dt.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           log.profiles?.nama_lengkap || '-',
           log.profiles?.email || '-',
-          log.tipe === 'masuk' ? 'Masuk' : 'Keluar',
+          tipeLabel(log.tipe),
           log.is_terlambat ? 'Ya' : 'Tidak',
-          keterangan?.detail || '-',
+          keterangan,
           log.latitude || '-',
           log.longitude || '-',
           log.accuracy ? Number(log.accuracy.toFixed(0)) : '-',
@@ -302,16 +326,16 @@ export default function AdminPage() {
       const ws = XLSX.utils.aoa_to_sheet(aoa)
 
       ws['!cols'] = [
-        { wch: 12 }, // Tanggal
-        { wch: 10 }, // Jam
-        { wch: 25 }, // Nama
-        { wch: 30 }, // Email
-        { wch: 10 }, // Tipe
-        { wch: 14 }, // Absen Menyusul
-        { wch: 22 }, // Keterangan
-        { wch: 14 }, // Latitude
-        { wch: 14 }, // Longitude
-        { wch: 12 }, // Akurasi
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 25 },
+        { wch: 30 },
+        { wch: 18 },
+        { wch: 14 },
+        { wch: 22 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 12 },
       ]
 
       const wb = XLSX.utils.book_new()
@@ -333,7 +357,7 @@ export default function AdminPage() {
 
   const formatTime = (iso: string | null | undefined) => {
     if (!iso) return '--:--'
-    return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    return new Date(iso).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' })
   }
 
   const formatDateShort = (iso: string | null | undefined) => {
@@ -345,6 +369,15 @@ export default function AdminPage() {
     const jalan = u.alamat_jalan || ''
     const wilayah = [u.kelurahan, u.kecamatan, u.kabupaten].filter(Boolean).join(', ')
     return { jalan, wilayah }
+  }
+
+  // Cek apakah istirahat telat (lewat 13:00 WITA)
+  const isIstirahatTelat = (log: AttendanceLog | null): boolean => {
+    if (!log) return false
+    const dt = new Date(log.waktu_absen)
+    const wita = dt.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false })
+    const [h, m] = wita.split('.').map(Number)
+    return h * 60 + m > 13 * 60 // lebih dari 13:00
   }
 
   const totalKaryawan = users.length
@@ -412,20 +445,24 @@ export default function AdminPage() {
           <p className="text-slate-500 mt-2">Berikut ringkasan absensi dan data karyawan hari ini</p>
         </div>
 
-        {/* Info Jam Kantor & Jam Pelayanan */}
+        {/* Info Jam */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
               ⏰
             </div>
-            <div className="flex-1 grid grid-cols-2 gap-3">
+            <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Kantor</p>
-                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Kantor</p>
+                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR}</p>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
-                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
+                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Istirahat</p>
+                <p className="text-xs font-bold text-amber-700">{LABEL_JAM.JAM_ISTIRAHAT}</p>
               </div>
             </div>
           </div>
@@ -545,25 +582,27 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-left border-b border-slate-100">
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Karyawan</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Masuk</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keterangan Masuk</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keluar</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keterangan Keluar</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Lokasi</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Karyawan</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Masuk</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Istirahat</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Selesai</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keluar</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Lokasi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {attendance.map((a) => {
                     const ketMasuk = getKeteranganMasuk(a.masuk)
                     const ketKeluar = getKeteranganKeluar(a.keluar)
+                    const telatIstirahatMulai = isIstirahatTelat(a.istirahatMulai)
+                    const telatIstirahatSelesai = isIstirahatTelat(a.istirahatSelesai)
 
                     return (
                       <tr key={a.user.id} className={`border-t border-slate-100 hover:bg-indigo-50/40 transition ${
                         a.status === 'lupa_absen_keluar' ? 'bg-amber-50/30' : ''
                       }`}>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {a.user.avatar_url ? (
                               <img
@@ -581,7 +620,7 @@ export default function AdminPage() {
                               </div>
                             )}
                             <div>
-                              <p className="font-semibold text-slate-800">{a.user.nama_lengkap}</p>
+                              <p className="font-semibold text-slate-800 text-xs">{a.user.nama_lengkap}</p>
                               {a.user.role === 'admin' && (
                                 <p className="text-[10px] text-violet-600 font-medium">Admin</p>
                               )}
@@ -589,10 +628,9 @@ export default function AdminPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
                           {a.masuk ? (
-                            <span className="inline-flex items-center gap-1.5 font-mono text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
                               {formatTime(a.masuk.waktu_absen)}
                             </span>
                           ) : (
@@ -600,90 +638,82 @@ export default function AdminPage() {
                           )}
                         </td>
 
-                        <td className="px-6 py-4">
-                          {ketMasuk ? (
+                        <td className="px-4 py-4">
+                          {a.istirahatMulai ? (
                             <div className="flex flex-col gap-0.5">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                                ketMasuk.warna === 'terlambat'
-                                  ? 'bg-amber-100 text-amber-700 border-amber-300'
-                                  : 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                              <span className={`inline-flex items-center gap-1 font-mono text-xs font-medium border px-2 py-1 rounded-lg ${
+                                telatIstirahatMulai
+                                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                  : 'text-amber-700 bg-amber-50 border-amber-200'
                               }`}>
-                                {ketMasuk.warna === 'terlambat' ? '⏰' : '✓'} {ketMasuk.label}
+                                ☕ {formatTime(a.istirahatMulai.waktu_absen)}
                               </span>
-                              <span className="text-[10px] text-slate-500 pl-1">{ketMasuk.detail}</span>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">-</span>
-                          )}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          {a.keluar ? (
-                            <span className="inline-flex items-center gap-1.5 font-mono text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2.5 py-1 rounded-lg">
-                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                              {formatTime(a.keluar.waktu_absen)}
-                            </span>
-                          ) : a.menyusul ? (
-                            <div className="flex flex-col items-start gap-0.5">
-                              <span className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg">
-                                ⏰ {formatTime(a.menyusul.waktu_absen)}
-                              </span>
-                              <span className="text-[10px] text-amber-600 font-medium pl-1">
-                                Input: {formatDateShort(a.menyusul.waktu_absen)}
-                              </span>
+                              {telatIstirahatMulai && (
+                                <span className="text-[9px] text-amber-600 font-medium pl-1">Terlambat</span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-xs text-slate-400 italic">--:--</span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4">
-                          {ketKeluar ? (
+                        <td className="px-4 py-4">
+                          {a.istirahatSelesai ? (
                             <div className="flex flex-col gap-0.5">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
-                                ketKeluar.warna === 'normal'
-                                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
-                                  : ketKeluar.warna === 'pulang_cepat'
-                                  ? 'bg-orange-100 text-orange-700 border-orange-300'
-                                  : 'bg-amber-100 text-amber-700 border-amber-300'
+                              <span className={`inline-flex items-center gap-1 font-mono text-xs font-medium border px-2 py-1 rounded-lg ${
+                                telatIstirahatSelesai
+                                  ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                  : 'text-blue-700 bg-blue-50 border-blue-200'
                               }`}>
-                                {ketKeluar.warna === 'normal' ? '✓' : ketKeluar.warna === 'pulang_cepat' ? '⚠️' : '⏰'} {ketKeluar.label}
+                                💪 {formatTime(a.istirahatSelesai.waktu_absen)}
                               </span>
-                              <span className="text-[10px] text-slate-500 pl-1">{ketKeluar.detail}</span>
+                              {telatIstirahatSelesai && (
+                                <span className="text-[9px] text-amber-600 font-medium pl-1">Terlambat</span>
+                              )}
                             </div>
-                          ) : a.menyusul ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
-                              ⏰ Absen Menyusul
-                            </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">-</span>
+                            <span className="text-xs text-slate-400 italic">--:--</span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
+                          {a.keluar ? (
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
+                              {formatTime(a.keluar.waktu_absen)}
+                            </span>
+                          ) : a.menyusul ? (
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-1 rounded-lg">
+                              ⏰ {formatTime(a.menyusul.waktu_absen)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">--:--</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-4">
                           {a.status === 'lengkap' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
                               ✅ Lengkap
                             </span>
                           )}
                           {a.status === 'belum_keluar' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
                               🟡 Belum Keluar
                             </span>
                           )}
                           {a.status === 'lupa_absen_keluar' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
-                              🟠 Lupa Absen Keluar
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
+                              🟠 Lupa Keluar
                             </span>
                           )}
                           {a.status === 'belum_absen' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-300">
                               ⚪ Belum Absen
                             </span>
                           )}
                         </td>
 
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-4">
                           {(a.masuk?.latitude || a.keluar?.latitude || a.menyusul?.latitude) ? (
                             <div className="flex flex-col gap-1">
                               {(a.masuk?.latitude && a.masuk?.longitude) && (
@@ -704,16 +734,6 @@ export default function AdminPage() {
                                   className="inline-flex items-center gap-1 text-[10px] font-medium text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 px-2 py-1 rounded-lg transition"
                                 >
                                   🔴 Keluar
-                                </a>
-                              )}
-                              {(a.menyusul?.latitude && a.menyusul?.longitude) && (
-                                <a
-                                  href={`https://www.google.com/maps?q=${a.menyusul.latitude},${a.menyusul.longitude}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600 hover:text-white bg-amber-50 hover:bg-amber-600 border border-amber-200 hover:border-amber-600 px-2 py-1 rounded-lg transition"
-                                >
-                                  ⏰ Menyusul
                                 </a>
                               )}
                             </div>
@@ -857,11 +877,11 @@ export default function AdminPage() {
       </div>
 
       <EditUserModal
-        user={editingUser}
-        isOpen={!!editingUser}
-        onClose={() => setEditingUser(null)}
-        onSave={handleSaveUser}
-      />
+  user={editingUser}
+  isOpen={!!editingUser}
+  onClose={() => setEditingUser(null)}
+  onSave={handleSaveUser}
+/>
     </main>
   )
 }
