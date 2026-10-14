@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import AvatarDropdown from '@/components/AvatarDropdown'
 
 type AttendanceLog = {
   id: number
@@ -11,16 +12,17 @@ type AttendanceLog = {
   latitude: number | null
   longitude: number | null
   accuracy: number | null
+  is_terlambat: boolean
 }
 
 export default function AbsenPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [now, setNow] = useState(new Date())
-  const [logs, setLogs] = useState<AttendanceLog[]>([])
+  const [todayLogs, setTodayLogs] = useState<AttendanceLog[]>([])
+  const [pendingLog, setPendingLog] = useState<AttendanceLog | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [lastLocation, setLastLocation] = useState<{ lat: number; lng: number; acc: number } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -40,22 +42,48 @@ export default function AbsenPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', user.id).single()
       setProfile(profileData)
-      await loadTodayLogs(user.id)
+      await loadData(user.id)
     }
     loadUser()
   }, [])
 
-  async function loadTodayLogs(userId: string) {
+  async function loadData(userId: string) {
+    // 1. Ambil log hari ini
     const startOfDay = new Date()
     startOfDay.setHours(0, 0, 0, 0)
-    const { data } = await supabase
+    const { data: today } = await supabase
       .from('attendance_logs').select('*').eq('user_id', userId)
       .gte('waktu_absen', startOfDay.toISOString())
       .order('waktu_absen', { ascending: true })
-    setLogs(data || [])
+    setTodayLogs(today || [])
+
+    // 2. Cek absen masuk kemarin yang belum ada keluar
+    const { data: pending } = await supabase
+      .from('attendance_logs').select('*').eq('user_id', userId)
+      .eq('tipe', 'masuk')
+      .lt('waktu_absen', startOfDay.toISOString())
+      .order('waktu_absen', { ascending: false })
+      .limit(10)
+
+    // Cari log masuk yang belum punya keluar setelahnya
+    let pendingLog: AttendanceLog | null = null
+    if (pending && pending.length > 0) {
+      for (const log of pending) {
+        const { data: keluarAfter } = await supabase
+          .from('attendance_logs').select('id')
+          .eq('user_id', userId)
+          .eq('tipe', 'keluar')
+          .gt('waktu_absen', log.waktu_absen)
+          .limit(1)
+        if (!keluarAfter || keluarAfter.length === 0) {
+          pendingLog = log
+          break
+        }
+      }
+    }
+    setPendingLog(pendingLog)
   }
 
-  // Ambil lokasi GPS dengan timeout
   function getCurrentPosition(): Promise<GeolocationPosition> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -70,19 +98,19 @@ export default function AbsenPage() {
     })
   }
 
-  async function handleAbsen(tipe: 'masuk' | 'keluar') {
+  async function handleAbsen(tipe: 'masuk' | 'keluar', isTerlambat = false) {
     if (!user) return
     setLoading(true)
     setMessage('')
 
-    const sudahAbsen = logs.some((log) => log.tipe === tipe)
-    if (sudahAbsen) {
-      setMessage(`Anda sudah absen ${tipe} hari ini.`)
+    // Kalau absen masuk, pastikan tidak ada pending dulu
+    if (tipe === 'masuk' && pendingLog) {
+      setMessage('⚠️ Anda masih punya absen masuk yang belum keluar. Selesaikan dulu.')
       setLoading(false)
       return
     }
 
-    // Ambil koordinat GPS
+    // Ambil GPS
     setMessage('📡 Mengambil lokasi Anda...')
     let lat: number | null = null
     let lng: number | null = null
@@ -93,15 +121,10 @@ export default function AbsenPage() {
       lat = pos.coords.latitude
       lng = pos.coords.longitude
       acc = pos.coords.accuracy
-      setLastLocation({ lat, lng, acc })
-    } catch (err: any) {
-      // Kalau GPS gagal, tetap izinkan absen tanpa koordinat
+    } catch (err) {
       console.warn('GPS error:', err)
-      setMessage('⚠️ Lokasi tidak terdeteksi, melanjutkan absen tanpa koordinat...')
-      await new Promise((r) => setTimeout(r, 800))
     }
 
-    // Simpan ke database
     const { error } = await supabase.from('attendance_logs').insert({
       user_id: user.id,
       tipe,
@@ -109,29 +132,22 @@ export default function AbsenPage() {
       latitude: lat,
       longitude: lng,
       accuracy: acc,
+      is_terlambat: isTerlambat,
     })
 
     if (error) {
       setMessage('Gagal absen: ' + error.message)
     } else {
-      setMessage(
-        lat
-          ? `Absen ${tipe} berhasil! 📍 Lokasi tercatat.`
-          : `Absen ${tipe} berhasil! ✨`
-      )
-      await loadTodayLogs(user.id)
+      if (isTerlambat) {
+        setMessage('✅ Absen keluar (terlambat) tercatat. Sekarang Anda bisa absen masuk.')
+      } else {
+        setMessage(`Absen ${tipe} berhasil! ${lat ? '📍 Lokasi tercatat.' : '✨'}`)
+      }
+      await loadData(user.id)
     }
     setLoading(false)
-    setTimeout(() => setMessage(''), 5000)
+    setTimeout(() => setMessage(''), 6000)
   }
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
-  const getInitials = (name: string) =>
-    name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
 
   if (!user) {
     return (
@@ -144,15 +160,14 @@ export default function AbsenPage() {
     )
   }
 
-  const jamMasuk = logs.find((l) => l.tipe === 'masuk')
-  const jamKeluar = logs.find((l) => l.tipe === 'keluar')
+  const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk')
+  const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar')
   const sudahMasuk = !!jamMasuk
   const sudahKeluar = !!jamKeluar
   const progress = (sudahMasuk ? 50 : 0) + (sudahKeluar ? 50 : 0)
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      {/* Background subtle */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
         <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
@@ -177,30 +192,20 @@ export default function AbsenPage() {
 
           <div className="flex items-center gap-2">
             {profile?.role === 'admin' && (
-              <a
-                href="/admin"
-                className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-2 rounded-lg transition font-medium"
-              >
+              <a href="/admin" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-2 rounded-lg transition font-medium">
                 Panel Admin
               </a>
             )}
-            <button
-              onClick={handleLogout}
-              className="text-slate-700 hover:text-rose-700 text-sm bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 px-3 py-2 rounded-lg transition font-medium"
-            >
-              Logout
-            </button>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full blur opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-white shadow-lg">
-                {profile?.nama_lengkap ? getInitials(profile.nama_lengkap) : '?'}
-              </div>
-            </div>
+             <AvatarDropdown
+              nama={profile?.nama_lengkap || 'User'}
+              email={profile?.email || ''}
+              role={profile?.role || 'karyawan'}
+              avatarUrl={profile?.avatar_url || null}
+            />
           </div>
         </div>
       </header>
 
-      {/* Konten */}
       <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
         {/* Kartu Jam */}
         <div className="relative group mb-6">
@@ -211,102 +216,46 @@ export default function AbsenPage() {
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
                 <span className="text-white text-xs font-medium">Live</span>
               </div>
-
               <p className="text-white/90 text-sm mb-1">
                 Halo, <span className="text-white font-semibold">{profile?.nama_lengkap}</span> 👋
               </p>
               <p className="text-white/70 text-xs mb-6">Waktu saat ini</p>
-
               <div className="text-6xl md:text-7xl font-bold font-mono tracking-tight text-white tabular-nums drop-shadow-lg">
                 {now.toLocaleTimeString('id-ID')}
               </div>
-
               <p className="text-white/80 text-sm mt-4">
-                {now.toLocaleDateString('id-ID', {
-                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                })}
+                {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
-
               <div className="mt-6 max-w-xs mx-auto">
                 <div className="flex justify-between text-xs text-white/80 mb-2">
                   <span>Progres Hari Ini</span>
                   <span>{progress}%</span>
                 </div>
                 <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 rounded-full transition-all duration-500 shadow-[0_0_10px_rgba(52,211,153,0.6)]"
-                    style={{ width: `${progress}%` }}
-                  />
+                  <div className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Kartu Ringkasan */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className={`relative bg-white border rounded-2xl p-5 transition shadow-sm ${
-            sudahMasuk ? 'border-emerald-200 shadow-emerald-500/5' : 'border-slate-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                sudahMasuk
-                  ? 'bg-gradient-to-br from-emerald-400 to-teal-400 shadow-md shadow-emerald-400/30'
-                  : 'bg-slate-100'
-              }`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={sudahMasuk ? 'text-white' : 'text-slate-400'}>
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                  <polyline points="10 17 15 12 10 7"/>
-                  <line x1="15" x2="3" y1="12" y2="12"/>
-                </svg>
+        {/* Peringatan Pending */}
+        {pendingLog && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 mb-6 shadow-md">
+            <div className="flex items-start gap-3">
+              <span className="text-3xl">⚠️</span>
+              <div className="flex-1">
+                <p className="font-bold text-amber-800">Anda Lupa Absen Keluar!</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID')}</strong> belum ada absen keluar.
+                </p>
+                <p className="text-sm text-amber-700 mt-1">
+                  Silakan lakukan absen keluar (terlambat) dulu untuk bisa absen masuk hari ini.
+                </p>
               </div>
-              <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
             </div>
-            <p className={`text-2xl font-bold font-mono tabular-nums ${
-              sudahMasuk ? 'text-emerald-500' : 'text-slate-300'
-            }`}>
-              {jamMasuk
-                ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID')
-                : '--:--:--'}
-            </p>
-            {sudahMasuk && (
-              <p className="text-[10px] text-emerald-500 mt-1 flex items-center gap-1 font-medium">
-                <span>✓</span> Tercatat
-              </p>
-            )}
           </div>
-
-          <div className={`relative bg-white border rounded-2xl p-5 transition shadow-sm ${
-            sudahKeluar ? 'border-rose-200 shadow-rose-500/5' : 'border-slate-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                sudahKeluar
-                  ? 'bg-gradient-to-br from-rose-400 to-pink-400 shadow-md shadow-rose-400/30'
-                  : 'bg-slate-100'
-              }`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={sudahKeluar ? 'text-white' : 'text-slate-400'}>
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" x2="9" y1="12" y2="12"/>
-                </svg>
-              </div>
-              <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
-            </div>
-            <p className={`text-2xl font-bold font-mono tabular-nums ${
-              sudahKeluar ? 'text-rose-500' : 'text-slate-300'
-            }`}>
-              {jamKeluar
-                ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID')
-                : '--:--:--'}
-            </p>
-            {sudahKeluar && (
-              <p className="text-[10px] text-rose-500 mt-1 flex items-center gap-1 font-medium">
-                <span>✓</span> Tercatat
-              </p>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Tombol Absen */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -314,67 +263,64 @@ export default function AbsenPage() {
             <span>📋</span> Absensi Hari Ini
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {pendingLog ? (
             <button
-              onClick={() => handleAbsen('masuk')}
-              disabled={loading || sudahMasuk}
-              className={`relative py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 group overflow-hidden ${
-                sudahMasuk
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
-              }`}
+              onClick={() => handleAbsen('keluar', true)}
+              disabled={loading}
+              className="w-full py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
             >
-              {!sudahMasuk && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              )}
-              {sudahMasuk ? '✓ Sudah Masuk' : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 12l2 2 4-4"/>
-                    <circle cx="12" cy="12" r="10"/>
-                  </svg>
-                  Absen Masuk
-                </>
-              )}
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Absen Keluar (Terlambat)
             </button>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                onClick={() => handleAbsen('masuk')}
+                disabled={loading || sudahMasuk}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  sudahMasuk
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sudahMasuk ? '✓ Sudah Masuk' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12l2 2 4-4"/>
+                      <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    Absen Masuk
+                  </>
+                )}
+              </button>
 
-            <button
-              onClick={() => handleAbsen('keluar')}
-              disabled={loading || sudahKeluar || !sudahMasuk}
-              className={`relative py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 group overflow-hidden ${
-                sudahKeluar || !sudahMasuk
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
-              }`}
-            >
-              {!sudahKeluar && sudahMasuk && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              )}
-              {sudahKeluar ? '✓ Sudah Keluar' : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" x2="9" y1="12" y2="12"/>
-                  </svg>
-                  Absen Keluar
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Info Lokasi Terakhir */}
-          {lastLocation && (
-            <div className="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-xl">
-              <p className="text-xs text-sky-700 flex items-center gap-2 font-medium">
-                <span>📍</span>
-                Lokasi terdeteksi: {lastLocation.lat.toFixed(6)}, {lastLocation.lng.toFixed(6)}
-                <span className="text-sky-500">(± {lastLocation.acc.toFixed(0)}m)</span>
-              </p>
+              <button
+                onClick={() => handleAbsen('keluar')}
+                disabled={loading || sudahKeluar || !sudahMasuk}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  sudahKeluar || !sudahMasuk
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sudahKeluar ? '✓ Sudah Keluar' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" x2="9" y1="12" y2="12"/>
+                    </svg>
+                    Absen Keluar
+                  </>
+                )}
+              </button>
             </div>
           )}
 
-          {!sudahMasuk && (
+          {!pendingLog && !sudahMasuk && (
             <p className="text-xs text-slate-500 mt-3 text-center">
               💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
             </p>
@@ -382,9 +328,9 @@ export default function AbsenPage() {
 
           {message && (
             <div className={`mt-4 text-sm text-center p-3 rounded-xl font-medium border ${
-              message.includes('berhasil')
+              message.includes('berhasil') || message.includes('tercatat')
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : message.includes('sudah') || message.includes('Mengambil') || message.includes('Lokasi')
+                : message.includes('sudah') || message.includes('Mengambil')
                 ? 'bg-amber-50 text-amber-700 border-amber-200'
                 : 'bg-rose-50 text-rose-700 border-rose-200'
             }`}>
@@ -393,102 +339,89 @@ export default function AbsenPage() {
           )}
         </div>
 
+        {/* Kartu Ringkasan */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahMasuk ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-slate-100'}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahMasuk ? 'text-white' : 'text-slate-400'}>
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                  <polyline points="10 17 15 12 10 7"/>
+                  <line x1="15" x2="3" y1="12" y2="12"/>
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
+            </div>
+            <p className={`text-2xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
+              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID') : '--:--:--'}
+            </p>
+          </div>
+
+          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200' : 'border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahKeluar ? 'bg-gradient-to-br from-rose-400 to-pink-400' : 'bg-slate-100'}`}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahKeluar ? 'text-white' : 'text-slate-400'}>
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" x2="9" y1="12" y2="12"/>
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
+            </div>
+            <p className={`text-2xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
+              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID') : '--:--:--'}
+            </p>
+          </div>
+        </div>
+
         {/* Riwayat */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-slate-800 font-bold flex items-center gap-2">
               <span>🕐</span> Riwayat Hari Ini
             </h2>
-            {logs.length > 0 && (
+            {todayLogs.length > 0 && (
               <span className="text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full font-medium">
-                {logs.length} catatan
+                {todayLogs.length} catatan
               </span>
             )}
           </div>
 
-          {logs.length === 0 ? (
+          {todayLogs.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-5xl mb-3 opacity-40">📭</p>
               <p className="text-slate-500 text-sm font-medium">Belum ada absensi hari ini</p>
-              <p className="text-slate-400 text-xs mt-1">Klik tombol absen di atas untuk mulai</p>
             </div>
           ) : (
-            <div className="relative space-y-3">
-              {logs.map((log, idx) => (
-                <div key={log.id} className="relative">
-                  {idx < logs.length - 1 && (
-                    <div className="absolute left-5 top-20 bottom-0 w-px bg-gradient-to-b from-slate-200 to-transparent" />
-                  )}
-                  <div className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                          log.tipe === 'masuk'
-                            ? 'bg-gradient-to-br from-emerald-400 to-teal-400 shadow-emerald-400/30'
-                            : 'bg-gradient-to-br from-rose-400 to-pink-400 shadow-rose-400/30'
-                        }`}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            {log.tipe === 'masuk' ? (
-                              <>
-                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                                <polyline points="10 17 15 12 10 7"/>
-                                <line x1="15" x2="3" y1="12" y2="12"/>
-                              </>
-                            ) : (
-                              <>
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                                <polyline points="16 17 21 12 16 7"/>
-                                <line x1="21" x2="9" y1="12" y2="12"/>
-                              </>
-                            )}
-                          </svg>
-                        </div>
-                        <div>
-                          <p className={`font-semibold text-sm ${
-                            log.tipe === 'masuk' ? 'text-emerald-600' : 'text-rose-500'
-                          }`}>
-                            Absen {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {new Date(log.waktu_absen).toLocaleDateString('id-ID', {
-                              day: 'numeric', month: 'short', year: 'numeric',
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <span className={`text-lg font-bold font-mono tabular-nums ${
-                        log.tipe === 'masuk' ? 'text-emerald-500' : 'text-rose-500'
+            <div className="space-y-3">
+              {todayLogs.map((log) => (
+                <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
+                        log.tipe === 'masuk' ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-gradient-to-br from-rose-400 to-pink-400'
                       }`}>
-                        {new Date(log.waktu_absen).toLocaleTimeString('id-ID', {
-                          hour: '2-digit', minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-
-                    {/* Info lokasi di riwayat */}
-                    {log.latitude && log.longitude ? (
-                      <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between">
-                        <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                          <span>📍</span>
-                          {log.latitude.toFixed(6)}, {log.longitude.toFixed(6)}
-                          {log.accuracy && (
-                            <span className="text-slate-400">(± {log.accuracy.toFixed(0)}m)</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                          {log.tipe === 'masuk' ? <polyline points="9 11 12 14 20 6"/> : <polyline points="16 17 21 12 16 7"/>}
+                        </svg>
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-sm ${log.tipe === 'masuk' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          Absen {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
+                          {log.is_terlambat && (
+                            <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
+                              TERLAMBAT
+                            </span>
                           )}
                         </p>
-                        <a
-                          href={`https://www.google.com/maps?q=${log.latitude},${log.longitude}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[10px] text-sky-600 hover:text-sky-700 font-medium flex items-center gap-0.5"
-                        >
-                          Buka Peta →
-                        </a>
+                        <p className="text-xs text-slate-500">
+                          {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
                       </div>
-                    ) : (
-                      <p className="mt-2 pt-2 border-t border-slate-200 text-[10px] text-slate-400 flex items-center gap-1">
-                        <span>📍</span> Lokasi tidak terekam
-                      </p>
-                    )}
+                    </div>
+                    <span className={`text-lg font-bold font-mono ${log.tipe === 'masuk' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                 </div>
               ))}

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import EditUserModal from '@/components/EditUserModal'
+import AvatarDropdown from '@/components/AvatarDropdown'
 
 type Profile = {
   id: string
@@ -21,6 +22,7 @@ type AttendanceLog = {
   latitude: number | null
   longitude: number | null
   accuracy: number | null
+  is_terlambat: boolean
   profiles: { nama_lengkap: string; email: string } | null
 }
 
@@ -31,6 +33,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<Profile[]>([])
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
+  const [exporting, setExporting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -71,17 +74,12 @@ export default function AdminPage() {
 
     const { data: logsData } = await supabase
       .from('attendance_logs')
-      .select(`id, user_id, tipe, waktu_absen, latitude, longitude, accuracy, profiles (nama_lengkap, email)`)
+      .select(`id, user_id, tipe, waktu_absen, latitude, longitude, accuracy, is_terlambat, profiles (nama_lengkap, email)`)
       .gte('waktu_absen', start.toISOString())
       .lte('waktu_absen', end.toISOString())
       .order('waktu_absen', { ascending: false })
 
     setLogs((logsData as any) || [])
-  }
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    router.push('/login')
   }
 
   async function handleSaveUser(
@@ -121,6 +119,82 @@ export default function AdminPage() {
     }
   }
 
+  // Export Excel mingguan
+  async function handleExportWeekly() {
+    setExporting(true)
+    try {
+      const end = new Date()
+      end.setHours(23, 59, 59, 999)
+      const start = new Date()
+      start.setDate(start.getDate() - 6)
+      start.setHours(0, 0, 0, 0)
+
+      const { data: logsData, error } = await supabase
+        .from('attendance_logs')
+        .select(`id, tipe, waktu_absen, latitude, longitude, accuracy, is_terlambat, profiles (nama_lengkap, email)`)
+        .gte('waktu_absen', start.toISOString())
+        .lte('waktu_absen', end.toISOString())
+        .order('waktu_absen', { ascending: true })
+
+      if (error) {
+        alert('Gagal ambil data: ' + error.message)
+        setExporting(false)
+        return
+      }
+
+      if (!logsData || logsData.length === 0) {
+        alert('Tidak ada data absensi dalam 7 hari terakhir.')
+        setExporting(false)
+        return
+      }
+
+      const headers = ['Tanggal', 'Jam', 'Nama', 'Email', 'Tipe', 'Terlambat', 'Latitude', 'Longitude', 'Akurasi (m)']
+      const rows = logsData.map((log: any) => {
+        const dt = new Date(log.waktu_absen)
+        return [
+          dt.toLocaleDateString('id-ID'),
+          dt.toLocaleTimeString('id-ID'),
+          log.profiles?.nama_lengkap || '-',
+          log.profiles?.email || '-',
+          log.tipe === 'masuk' ? 'Masuk' : 'Keluar',
+          log.is_terlambat ? 'Ya' : 'Tidak',
+          log.latitude || '-',
+          log.longitude || '-',
+          log.accuracy ? log.accuracy.toFixed(0) : '-',
+        ]
+      })
+
+      const escapeCsv = (val: any) => {
+        const s = String(val)
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`
+        }
+        return s
+      }
+
+      const csvContent = [
+        headers.map(escapeCsv).join(','),
+        ...rows.map((row) => row.map(escapeCsv).join(',')),
+      ].join('\n')
+
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `absensi_${start.toISOString().split('T')[0]}_sd_${end.toISOString().split('T')[0]}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      alert(`✅ Berhasil export ${logsData.length} data absensi 7 hari terakhir.`)
+    } catch (err: any) {
+      alert('Gagal export: ' + err.message)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const getInitials = (name: string) =>
     name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
 
@@ -137,14 +211,13 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      {/* Background subtle */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
         <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl" />
       </div>
 
-      {/* Navbar Glass */}
+      {/* Navbar */}
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -161,24 +234,15 @@ export default function AdminPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/absen"
-              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
-            >
+            <Link href="/absen" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium">
               Halaman Absen
             </Link>
-            <button
-              onClick={handleLogout}
-              className="text-slate-700 hover:text-rose-700 text-sm bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 px-4 py-2 rounded-lg transition font-medium"
-            >
-              Logout
-            </button>
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full blur opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-full flex items-center justify-center text-white font-bold text-sm ring-2 ring-white shadow-lg">
-                {profile?.nama_lengkap ? getInitials(profile.nama_lengkap) : 'A'}
-              </div>
-            </div>
+            <AvatarDropdown
+              nama={profile?.nama_lengkap || 'Admin'}
+              email={profile?.email || ''}
+              role={profile?.role || 'admin'}
+              avatarUrl={profile?.avatar_url || null}
+            />
           </div>
         </div>
       </header>
@@ -206,9 +270,7 @@ export default function AdminPage() {
                 <p className="text-white text-5xl font-bold mt-2 drop-shadow-sm">{users.length}</p>
                 <p className="text-white/70 text-xs mt-2">orang terdaftar</p>
               </div>
-              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                👥
-              </div>
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">👥</div>
             </div>
           </div>
 
@@ -220,9 +282,7 @@ export default function AdminPage() {
                 <p className="text-white text-5xl font-bold mt-2 drop-shadow-sm">{logs.length}</p>
                 <p className="text-white/70 text-xs mt-2">catatan absensi</p>
               </div>
-              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                📋
-              </div>
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">📋</div>
             </div>
           </div>
 
@@ -236,28 +296,41 @@ export default function AdminPage() {
                 </p>
                 <p className="text-white/70 text-xs mt-2">dari {users.length} karyawan</p>
               </div>
-              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                ✅
-              </div>
+              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-2xl shadow-lg">✅</div>
             </div>
           </div>
         </div>
 
-        {/* Filter Tanggal */}
+        {/* Filter Tanggal & Export */}
         <div className="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-indigo-500/30">
-              📅
+          <div className="flex items-center gap-3 flex-wrap justify-between">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-indigo-500/30">
+                📅
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 block">Filter Tanggal</label>
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                  className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
+                />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-slate-500 block">Filter Tanggal</label>
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
-              />
-            </div>
+
+            <button
+              onClick={handleExportWeekly}
+              disabled={exporting}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" x2="12" y1="15" y2="3"/>
+              </svg>
+              {exporting ? 'Menyiapkan...' : 'Export Excel (7 Hari)'}
+            </button>
           </div>
         </div>
 
@@ -288,7 +361,6 @@ export default function AdminPage() {
             <div className="text-center py-16">
               <p className="text-6xl mb-3 opacity-40">📭</p>
               <p className="text-slate-500 text-sm font-medium">Belum ada absensi pada tanggal ini</p>
-              <p className="text-slate-400 text-xs mt-1">Coba ubah filter tanggal di atas</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -304,7 +376,9 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <tr key={log.id} className="border-t border-slate-100 hover:bg-indigo-50/40 transition">
+                    <tr key={log.id} className={`border-t border-slate-100 hover:bg-indigo-50/40 transition ${
+                      log.is_terlambat ? 'bg-amber-50/40' : ''
+                    }`}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-gradient-to-br from-slate-400 to-slate-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
@@ -315,16 +389,23 @@ export default function AdminPage() {
                       </td>
                       <td className="px-6 py-4 text-slate-500">{log.profiles?.email || '-'}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                          log.tipe === 'masuk'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            log.tipe === 'masuk' ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`} />
-                          {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
-                        </span>
+                        <div className="flex flex-col gap-1">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold w-fit ${
+                            log.tipe === 'masuk'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${
+                              log.tipe === 'masuk' ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`} />
+                            {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
+                          </span>
+                          {log.is_terlambat && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300 w-fit">
+                              ⏰ TERLAMBAT
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 font-mono text-slate-700 font-medium">
                         {new Date(log.waktu_absen).toLocaleTimeString('id-ID')}
@@ -345,9 +426,7 @@ export default function AdminPage() {
                               Lihat Peta
                             </a>
                             {log.accuracy && (
-                              <p className="text-[10px] text-slate-400 pl-1">
-                                Akurasi ± {log.accuracy.toFixed(0)}m
-                              </p>
+                              <p className="text-[10px] text-slate-400 pl-1">Akurasi ± {log.accuracy.toFixed(0)}m</p>
                             )}
                           </div>
                         ) : (
@@ -442,7 +521,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Modal Edit */}
       <EditUserModal
         user={editingUser}
         isOpen={!!editingUser}
