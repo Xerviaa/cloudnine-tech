@@ -12,8 +12,13 @@ type Profile = {
   nama_lengkap: string
   email: string
   role: 'karyawan' | 'admin'
+  avatar_url: string | null
+  nomor_hp: string | null
+  alamat_jalan: string | null
+  kabupaten: string | null
+  kecamatan: string | null
+  kelurahan: string | null
 }
-
 type AttendanceLog = {
   id: number
   user_id: string
@@ -237,7 +242,7 @@ export default function AdminPage() {
             <Link href="/absen" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium">
               Halaman Absen
             </Link>
-            <AvatarDropdown
+                        <AvatarDropdown
               nama={profile?.nama_lengkap || 'Admin'}
               email={profile?.email || ''}
               role={profile?.role || 'admin'}
