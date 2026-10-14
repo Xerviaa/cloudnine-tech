@@ -216,12 +216,17 @@ export default function ProfilPage() {
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/absen" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+            {/* ====== LOGO DIPERBAIKI DI SINI ====== */}
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              {/* Ganti src dengan path logo kamu, misal: /logo-absenkit.png */}
+              {/* object-contain = tidak terpotong, bg-transparent = background transparan */}
+              <img
+                src="/logo-absenkit.png"
+                alt="Logo AbsenKita"
+                className="w-full h-full object-contain bg-transparent"
+              />
             </div>
+            {/* ====== SAMPAI SINI ====== */}
             <div>
               <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
               <p className="text-slate-500 text-xs">Edit Profil</p>
@@ -516,7 +521,7 @@ export default function ProfilPage() {
       {/* Modal Foto Besar */}
       {showPhotoModal && avatarUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4"
           onClick={() => setShowPhotoModal(false)}
         >
           {/* Tombol Close */}
