@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AvatarDropdown from '@/components/AvatarDropdown'
 import { JAM_KANTOR, LABEL_JAM, cekTerlambatMasuk, cekStatusKeluar, cekStatusIstirahat } from '@/lib/config/jam-kantor'
@@ -27,6 +28,7 @@ export default function AbsenPage() {
   const [pendingLog, setPendingLog] = useState<AttendanceLog | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
 
@@ -47,6 +49,7 @@ export default function AbsenPage() {
         .from('profiles').select('*').eq('id', user.id).single()
       setProfile(profileData)
       await loadData(user.id)
+      await loadPendingLeave(user.id)
     }
     loadUser()
   }, [])
@@ -86,6 +89,15 @@ export default function AbsenPage() {
     setPendingLog(foundPending)
   }
 
+  async function loadPendingLeave(userId: string) {
+    const { count } = await supabase
+      .from('leave_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+    setPendingLeaveCount(count || 0)
+  }
+
   function getCurrentPosition(): Promise<GeolocationPosition> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -105,16 +117,13 @@ export default function AbsenPage() {
     setLoading(true)
     setMessage('')
 
-    // Kalau absen masuk, pastikan tidak ada pending dulu
     if (tipe === 'masuk' && pendingLog) {
       setMessage('⚠️ Anda masih punya absen masuk yang belum keluar. Selesaikan dulu.')
       setLoading(false)
       return
     }
 
-    // ===== VALIDASI JAM KANTOR (untuk absen keluar normal) =====
     if (tipe === 'keluar' && !isTerlambat) {
-      // Cek apakah masih dalam istirahat
       const istirahatMulai = todayLogs.find((l) => l.tipe === 'istirahat_mulai')
       const istirahatSelesai = todayLogs.find((l) => l.tipe === 'istirahat_selesai')
       if (istirahatMulai && !istirahatSelesai) {
@@ -147,7 +156,6 @@ export default function AbsenPage() {
       }
     }
 
-    // ===== AMBIL GPS =====
     setMessage('📡 Mengambil lokasi Anda...')
     let lat: number | null = null
     let lng: number | null = null
@@ -162,7 +170,6 @@ export default function AbsenPage() {
       console.warn('GPS error:', err)
     }
 
-    // ===== SIMPAN KE DATABASE =====
     const { error } = await supabase.from('attendance_logs').insert({
       user_id: user.id,
       tipe,
@@ -224,7 +231,6 @@ export default function AbsenPage() {
     )
   }
 
-  // Ambil log berdasarkan tipe
   const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
   const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar' && !l.is_terlambat)
   const istirahatMulai = todayLogs.find((l) => l.tipe === 'istirahat_mulai')
@@ -235,7 +241,6 @@ export default function AbsenPage() {
   const sedangIstirahat = !!istirahatMulai && !istirahatSelesai
   const sudahIstirahat = !!istirahatMulai && !!istirahatSelesai
 
-  // Progress: 4 tahap (masuk, istirahat mulai, istirahat selesai, keluar)
   const progress =
     (sudahMasuk ? 25 : 0) +
     (istirahatMulai ? 25 : 0) +
@@ -280,9 +285,26 @@ export default function AbsenPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* ============================================================ */}
+            {/* TOMBOL AJUKAN IZIN untuk karyawan                              */}
+            {/* ============================================================ */}
+            <Link
+              href="/izin"
+              className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
+            >
+              <span>📝</span>
+              <span className="hidden sm:inline">Ajukan Izin</span>
+              <span className="sm:hidden">Izin</span>
+              {pendingLeaveCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full flex items-center justify-center border border-white">
+                  {pendingLeaveCount > 9 ? '9+' : pendingLeaveCount}
+                </span>
+              )}
+            </Link>
+
             {profile?.role === 'admin' && (
               <a href="/admin" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-2 rounded-lg transition font-medium">
-                Panel Admin
+                Admin
               </a>
             )}
             <AvatarDropdown
@@ -327,6 +349,38 @@ export default function AbsenPage() {
             </div>
           </div>
         </div>
+
+        {/* ============================================================ */}
+        {/* BANNER AJUKAN IZIN (Besar & Mencolok)                         */}
+        {/* ============================================================ */}
+        <Link
+          href="/izin"
+          className="block mb-6 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-2xl p-5 shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:-translate-y-1 relative overflow-hidden group"
+        >
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition" />
+          <div className="relative flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl shadow-lg shrink-0">
+              📝
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-bold text-base leading-tight">
+                Butuh Izin, Sakit, atau Cuti?
+              </p>
+              <p className="text-white/80 text-xs mt-0.5">
+                Ajukan di sini, admin akan memproses pengajuan Anda
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur rounded-full text-white text-xl group-hover:translate-x-1 transition">
+              →
+            </div>
+          </div>
+          {pendingLeaveCount > 0 && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold">
+              <span className="w-2 h-2 rounded-full bg-amber-900 animate-pulse" />
+              Anda punya {pendingLeaveCount} pengajuan yang menunggu
+            </div>
+          )}
+        </Link>
 
         {/* Info Jam Kantor & Jam Pelayanan & Jam Istirahat */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
@@ -389,7 +443,6 @@ export default function AbsenPage() {
             </button>
           ) : (
             <div className="space-y-3">
-              {/* Baris 1: Masuk & Istirahat Mulai */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   onClick={() => handleAbsen('masuk')}
@@ -432,7 +485,6 @@ export default function AbsenPage() {
                 </button>
               </div>
 
-              {/* Baris 2: Istirahat Selesai & Keluar */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                   onClick={() => handleAbsen('istirahat_selesai')}
@@ -476,7 +528,6 @@ export default function AbsenPage() {
                 </button>
               </div>
 
-              {/* Hint */}
               {!sudahMasuk && (
                 <p className="text-xs text-slate-500 text-center">
                   💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
