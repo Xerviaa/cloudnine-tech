@@ -35,13 +35,24 @@ export default function ProfilPage() {
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showPhotoMenu, setShowPhotoMenu] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   const router = useRouter()
   const supabase = createClient()
+
+  // Deteksi apakah user pakai HP atau laptop
+  useEffect(() => {
+    const ua = navigator.userAgent
+    const mobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua)
+    setIsMobile(mobile)
+  }, [])
 
   useEffect(() => {
     async function loadProfile() {
@@ -102,14 +113,13 @@ export default function ProfilPage() {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setShowPhotoMenu(false)
 
-    // Validasi ukuran (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file terlalu besar. Maksimal 2MB.')
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Ukuran file terlalu besar. Maksimal 50MB.')
       return
     }
 
-    // Validasi tipe
     if (!file.type.startsWith('image/')) {
       alert('File harus berupa gambar.')
       return
@@ -117,12 +127,10 @@ export default function ProfilPage() {
 
     setUploading(true)
     try {
-      // Buat nama file unik
       const fileExt = file.name.split('.').pop()
       const fileName = `${userId}-${Date.now()}.${fileExt}`
       const filePath = `${fileName}`
 
-      // Upload ke Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, { upsert: true })
@@ -133,12 +141,10 @@ export default function ProfilPage() {
         return
       }
 
-      // Ambil public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath)
 
-      // Update tabel profiles
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -156,7 +162,8 @@ export default function ProfilPage() {
       alert('Gagal upload: ' + err.message)
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
+      if (cameraInputRef.current) cameraInputRef.current.value = ''
+      if (galleryInputRef.current) galleryInputRef.current.value = ''
     }
   }
 
@@ -266,18 +273,28 @@ export default function ProfilPage() {
                 {profile?.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
               </span>
 
+              {/* Input tersembunyi untuk kamera & galeri */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className="hidden"
+              />
+
               {/* Tombol Foto */}
               <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarUpload}
-                  className="hidden"
-                />
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => setShowPhotoMenu(!showPhotoMenu)}
                   disabled={uploading}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition disabled:opacity-50"
                 >
@@ -304,6 +321,40 @@ export default function ProfilPage() {
                   </button>
                 )}
               </div>
+
+              {/* Menu Pilihan: Kamera / Galeri */}
+              {showPhotoMenu && (
+                <div className="mt-3 inline-flex gap-2 p-2 bg-slate-50 border border-slate-200 rounded-xl">
+                  {/* Tombol Kamera - HANYA muncul di HP */}
+                  {isMobile && (
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-white rounded-lg transition min-w-[80px]"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+                        <circle cx="12" cy="13" r="3"/>
+                      </svg>
+                      <span className="text-[11px] font-medium text-slate-700">Kamera</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="flex flex-col items-center gap-1 px-4 py-2 hover:bg-white rounded-lg transition min-w-[80px]"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-600">
+                      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                      <circle cx="9" cy="9" r="2"/>
+                      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                    </svg>
+                    <span className="text-[11px] font-medium text-slate-700">Galeri</span>
+                  </button>
+                </div>
+              )}
+
               <p className="text-[10px] text-slate-400 mt-2">📷 Format: JPG, PNG • Maks 50MB</p>
             </div>
           </div>

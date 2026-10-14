@@ -57,7 +57,7 @@ export default function AbsenPage() {
       .order('waktu_absen', { ascending: true })
     setTodayLogs(today || [])
 
-    // 2. Cek absen masuk kemarin yang belum ada keluar
+    // 2. Cek absen masuk kemarin yang belum ada keluar setelahnya
     const { data: pending } = await supabase
       .from('attendance_logs').select('*').eq('user_id', userId)
       .eq('tipe', 'masuk')
@@ -65,8 +65,8 @@ export default function AbsenPage() {
       .order('waktu_absen', { ascending: false })
       .limit(10)
 
-    // Cari log masuk yang belum punya keluar setelahnya
-    let pendingLog: AttendanceLog | null = null
+    // Cari log masuk yang belum punya keluar setelahnya (keluar apapun, termasuk terlambat)
+    let foundPending: AttendanceLog | null = null
     if (pending && pending.length > 0) {
       for (const log of pending) {
         const { data: keluarAfter } = await supabase
@@ -76,12 +76,12 @@ export default function AbsenPage() {
           .gt('waktu_absen', log.waktu_absen)
           .limit(1)
         if (!keluarAfter || keluarAfter.length === 0) {
-          pendingLog = log
+          foundPending = log
           break
         }
       }
     }
-    setPendingLog(pendingLog)
+    setPendingLog(foundPending)
   }
 
   function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -160,8 +160,13 @@ export default function AbsenPage() {
     )
   }
 
-  const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk')
-  const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar')
+  // ===== LOGIC BARU =====
+  // Absen masuk HARI INI (bukan yang terlambat)
+  const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
+
+  // Absen keluar HARI INI (bukan yang terlambat dari kemarin)
+  const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar' && !l.is_terlambat)
+
   const sudahMasuk = !!jamMasuk
   const sudahKeluar = !!jamKeluar
   const progress = (sudahMasuk ? 50 : 0) + (sudahKeluar ? 50 : 0)
@@ -196,7 +201,7 @@ export default function AbsenPage() {
                 Panel Admin
               </a>
             )}
-             <AvatarDropdown
+            <AvatarDropdown
               nama={profile?.nama_lengkap || 'User'}
               email={profile?.email || ''}
               role={profile?.role || 'karyawan'}
