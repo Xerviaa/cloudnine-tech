@@ -24,6 +24,7 @@ type LeaveRequest = {
   catatan_admin: string | null
   approved_by: string | null
   approved_at: string | null
+  attachment_url: string | null
   created_at: string
   updated_at: string
   profiles?: Profile | null
@@ -43,6 +44,9 @@ export default function AdminIzinPage() {
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null)
   const [action, setAction] = useState<'disetujui' | 'ditolak' | null>(null)
   const [catatan, setCatatan] = useState('')
+
+  // Preview foto surat dokter (modal fullscreen)
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
 
   const router = useRouter()
   const supabase = createClient()
@@ -71,20 +75,24 @@ export default function AdminIzinPage() {
 
   useEffect(() => {
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === 'Escape' && !processing) {
-        setSelectedRequest(null)
-        setAction(null)
-        setCatatan('')
+      if (e.key === 'Escape') {
+        if (viewingPhoto) {
+          setViewingPhoto(null)
+        } else if (selectedRequest && !processing) {
+          setSelectedRequest(null)
+          setAction(null)
+          setCatatan('')
+        }
       }
     }
-    if (selectedRequest) {
+    if (selectedRequest || viewingPhoto) {
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [selectedRequest, processing])
+  }, [selectedRequest, processing, viewingPhoto])
 
   useEffect(() => {
-    if (selectedRequest) {
+    if (selectedRequest || viewingPhoto) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = ''
@@ -92,16 +100,12 @@ export default function AdminIzinPage() {
     return () => {
       document.body.style.overflow = ''
     }
-  }, [selectedRequest])
+  }, [selectedRequest, viewingPhoto])
 
-  // ============================================================
-  // QUERY TERPISAH: Ambil leave_requests, lalu ambil profiles
-  // ============================================================
   async function loadRequests() {
     setLoadError('')
     console.log('🚀 Start loading leave requests...')
 
-    // STEP 1: Ambil semua leave_requests
     const { data: requestsData, error: requestsError } = await supabase
       .from('leave_requests')
       .select('*')
@@ -120,7 +124,6 @@ export default function AdminIzinPage() {
       return
     }
 
-    // STEP 2: Ambil profile untuk semua user_id yang ada
     const userIds = [...new Set(requestsData.map((r: any) => r.user_id))]
     console.log('📋 User IDs yang perlu di-load:', userIds.length)
 
@@ -137,7 +140,6 @@ export default function AdminIzinPage() {
 
     console.log('✅ STEP 2 OK. Dapat', profilesData?.length || 0, 'profiles')
 
-    // STEP 3: Gabungkan
     const profilesMap = new Map((profilesData || []).map((p: any) => [p.id, p]))
     const merged = requestsData.map((r: any) => ({
       ...r,
@@ -425,6 +427,11 @@ export default function AdminIzinPage() {
                           <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusCfg.badge}`}>
                             {statusCfg.emoji} {statusCfg.label}
                           </span>
+                          {r.attachment_url && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700 border border-violet-200">
+                              📎 Ada Lampiran
+                            </span>
+                          )}
                         </div>
 
                         <p className="text-sm text-slate-800 font-semibold">
@@ -435,6 +442,34 @@ export default function AdminIzinPage() {
                         </p>
 
                         <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{r.alasan}</p>
+
+                        {/* Foto Surat Dokter - Thumbnail di Card */}
+                        {r.attachment_url && (
+                          <div className="mt-3">
+                            <p className="text-[10px] text-slate-500 font-medium mb-1">
+                              📎 Surat Dokter:
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setViewingPhoto(r.attachment_url)}
+                              className="relative group inline-block"
+                            >
+                              <img
+                                src={r.attachment_url}
+                                alt="Surat dokter"
+                                className="w-28 h-28 object-cover rounded-xl border-2 border-slate-200 shadow-md transition group-hover:scale-105 group-hover:border-indigo-400"
+                              />
+                              <div className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="11" cy="11" r="8"/>
+                                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                  <line x1="11" y1="8" x2="11" y2="14"/>
+                                  <line x1="8" y1="11" x2="14" y2="11"/>
+                                </svg>
+                              </div>
+                            </button>
+                          </div>
+                        )}
 
                         {r.catatan_admin && (
                           <div className={`mt-3 border-l-2 pl-3 py-2 rounded-r ${
@@ -494,7 +529,7 @@ export default function AdminIzinPage() {
           onClick={() => !processing && (setSelectedRequest(null), setAction(null), setCatatan(''))}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className={`p-5 ${
@@ -517,7 +552,7 @@ export default function AdminIzinPage() {
               </div>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 overflow-y-auto">
               <div className="bg-slate-50 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs">
                   <span className="text-slate-500 w-20">Tipe:</span>
@@ -538,6 +573,37 @@ export default function AdminIzinPage() {
                 </div>
               </div>
 
+              {/* Foto Surat Dokter di Modal */}
+              {selectedRequest.attachment_url && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    📎 Surat Dokter:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setViewingPhoto(selectedRequest.attachment_url)}
+                    className="relative group w-full"
+                  >
+                    <img
+                      src={selectedRequest.attachment_url}
+                      alt="Surat dokter"
+                      className="w-full max-h-64 object-contain rounded-xl border-2 border-slate-200 shadow-md transition group-hover:border-indigo-400 bg-slate-50"
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition bg-white/90 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold text-slate-700 shadow-lg">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8"/>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                          <line x1="11" y1="8" x2="11" y2="14"/>
+                          <line x1="8" y1="11" x2="14" y2="11"/>
+                        </svg>
+                        Klik untuk perbesar
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Catatan Admin <span className="text-slate-400 font-normal">(opsional)</span>
@@ -555,7 +621,7 @@ export default function AdminIzinPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end">
+            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -590,6 +656,40 @@ export default function AdminIzinPage() {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Preview Foto Surat Dokter (Fullscreen) */}
+      {viewingPhoto && (
+        <div
+          className="fixed inset-0 z-[10001] bg-black/95 backdrop-blur-sm"
+          onClick={() => setViewingPhoto(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              setViewingPhoto(null)
+            }}
+            className="fixed top-4 right-4 z-[10002] w-12 h-12 bg-white/30 hover:bg-white/50 backdrop-blur-md rounded-full flex items-center justify-center text-white transition shadow-lg"
+            aria-label="Tutup"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+
+          <div
+            className="w-full h-full flex items-center justify-center p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={viewingPhoto}
+              alt="Surat dokter"
+              className="max-w-full max-h-[90vh] rounded-2xl shadow-2xl object-contain"
+            />
           </div>
         </div>
       )}
