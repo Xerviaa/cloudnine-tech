@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AvatarDropdown from '@/components/AvatarDropdown'
+import { JAM_KANTOR, LABEL_JAM, cekTerlambatMasuk, cekStatusKeluar } from '@/lib/config/jam-kantor'
+import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
 
 type AttendanceLog = {
   id: number
@@ -65,7 +67,6 @@ export default function AbsenPage() {
       .order('waktu_absen', { ascending: false })
       .limit(10)
 
-    // Cari log masuk yang belum punya keluar setelahnya (keluar apapun, termasuk terlambat)
     let foundPending: AttendanceLog | null = null
     if (pending && pending.length > 0) {
       for (const log of pending) {
@@ -110,7 +111,33 @@ export default function AbsenPage() {
       return
     }
 
-    // Ambil GPS
+    // ===== VALIDASI JAM KANTOR (untuk absen keluar normal) =====
+    if (tipe === 'keluar' && !isTerlambat) {
+      const { status, menitCepat } = cekStatusKeluar(new Date())
+
+      if (status === 'lewat_batas') {
+        setMessage(
+          `⚠️ Sudah lewat jam operasional (${JAM_KANTOR.JAM_KELUAR_BATAS} WITA). ` +
+          `Silakan absen keluar besok (Absen Menyusul).`
+        )
+        setLoading(false)
+        return
+      }
+
+      if (status === 'pulang_cepat') {
+        const konfirmasi = confirm(
+          `⏰ Anda akan absen keluar sebelum jam ${JAM_KANTOR.JAM_KELUAR_MULAI} WITA.\n\n` +
+          `Status akan tercatat "Pulang Cepat" (${menitCepat} menit lebih awal).\n\n` +
+          `Yakin ingin melanjutkan?`
+        )
+        if (!konfirmasi) {
+          setLoading(false)
+          return
+        }
+      }
+    }
+
+    // ===== AMBIL GPS =====
     setMessage('📡 Mengambil lokasi Anda...')
     let lat: number | null = null
     let lng: number | null = null
@@ -125,6 +152,7 @@ export default function AbsenPage() {
       console.warn('GPS error:', err)
     }
 
+    // ===== SIMPAN KE DATABASE =====
     const { error } = await supabase.from('attendance_logs').insert({
       user_id: user.id,
       tipe,
@@ -140,13 +168,27 @@ export default function AbsenPage() {
     } else {
       if (isTerlambat) {
         setMessage('✅ Absen keluar (terlambat) tercatat. Sekarang Anda bisa absen masuk.')
+      } else if (tipe === 'masuk') {
+        // Cek apakah terlambat masuk
+        const { terlambat, menit } = cekTerlambatMasuk(new Date())
+        if (terlambat) {
+          setMessage(`✅ Absen masuk berhasil! ⚠️ Anda terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_MASUK_BATAS}.`)
+        } else {
+          setMessage(`✅ Absen masuk berhasil! ${lat ? '📍 Lokasi tercatat.' : ''}`)
+        }
       } else {
-        setMessage(`Absen ${tipe} berhasil! ${lat ? '📍 Lokasi tercatat.' : '✨'}`)
+        // Absen keluar normal
+        const { status, menitCepat } = cekStatusKeluar(new Date())
+        if (status === 'pulang_cepat') {
+          setMessage(`✅ Absen keluar berhasil! ⚠️ Anda pulang ${menitCepat} menit lebih awal.`)
+        } else {
+          setMessage(`✅ Absen keluar berhasil! ${lat ? '📍 Lokasi tercatat.' : ''}`)
+        }
       }
       await loadData(user.id)
     }
     setLoading(false)
-    setTimeout(() => setMessage(''), 6000)
+    setTimeout(() => setMessage(''), 7000)
   }
 
   if (!user) {
@@ -160,7 +202,6 @@ export default function AbsenPage() {
     )
   }
 
-  // ===== LOGIC BARU =====
   // Absen masuk HARI INI (bukan yang terlambat)
   const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
 
@@ -170,6 +211,10 @@ export default function AbsenPage() {
   const sudahMasuk = !!jamMasuk
   const sudahKeluar = !!jamKeluar
   const progress = (sudahMasuk ? 50 : 0) + (sudahKeluar ? 50 : 0)
+
+  // Keterangan masuk & keluar
+  const ketMasuk = getKeteranganMasuk(jamMasuk || null)
+  const ketKeluar = getKeteranganKeluar(jamKeluar || null)
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -190,7 +235,7 @@ export default function AbsenPage() {
               </div>
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">KantorAbsensi</p>
+              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
               <p className="text-slate-500 text-xs">Halaman Absen</p>
             </div>
           </div>
@@ -224,12 +269,12 @@ export default function AbsenPage() {
               <p className="text-white/90 text-sm mb-1">
                 Halo, <span className="text-white font-semibold">{profile?.nama_lengkap}</span> 👋
               </p>
-              <p className="text-white/70 text-xs mb-6">Waktu saat ini</p>
+              <p className="text-white/70 text-xs mb-6">Waktu saat ini (WITA)</p>
               <div className="text-6xl md:text-7xl font-bold font-mono tracking-tight text-white tabular-nums drop-shadow-lg">
-                {now.toLocaleTimeString('id-ID')}
+                {now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}
               </div>
               <p className="text-white/80 text-sm mt-4">
-                {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Makassar' })}
               </p>
               <div className="mt-6 max-w-xs mx-auto">
                 <div className="flex justify-between text-xs text-white/80 mb-2">
@@ -244,6 +289,25 @@ export default function AbsenPage() {
           </div>
         </div>
 
+                {/* Info Jam Kantor & Jam Pelayanan */}
+        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
+              ⏰
+            </div>
+            <div className="flex-1 grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Kantor</p>
+                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR} WITA</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
+                <p className="text-sm font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN} WITA</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Peringatan Pending */}
         {pendingLog && (
           <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 mb-6 shadow-md">
@@ -252,7 +316,7 @@ export default function AbsenPage() {
               <div className="flex-1">
                 <p className="font-bold text-amber-800">Anda Lupa Absen Keluar!</p>
                 <p className="text-sm text-amber-700 mt-1">
-                  Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID')}</strong> belum ada absen keluar.
+                  Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Makassar' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}</strong> belum ada absen keluar.
                 </p>
                 <p className="text-sm text-amber-700 mt-1">
                   Silakan lakukan absen keluar (terlambat) dulu untuk bisa absen masuk hari ini.
@@ -358,8 +422,15 @@ export default function AbsenPage() {
               <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
             </div>
             <p className={`text-2xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
-              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID') : '--:--:--'}
+              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' }) : '--:--:--'}
             </p>
+            {ketMasuk && (
+              <p className={`text-[10px] mt-1 font-medium ${
+                ketMasuk.warna === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'
+              }`}>
+                {ketMasuk.detail}
+              </p>
+            )}
           </div>
 
           <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200' : 'border-slate-200'}`}>
@@ -374,8 +445,15 @@ export default function AbsenPage() {
               <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
             </div>
             <p className={`text-2xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
-              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID') : '--:--:--'}
+              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' }) : '--:--:--'}
             </p>
+            {ketKeluar && (
+              <p className={`text-[10px] mt-1 font-medium ${
+                ketKeluar.warna === 'normal' ? 'text-emerald-600' : 'text-orange-600'
+              }`}>
+                {ketKeluar.detail}
+              </p>
+            )}
           </div>
         </div>
 
@@ -399,37 +477,53 @@ export default function AbsenPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {todayLogs.map((log) => (
-                <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                        log.tipe === 'masuk' ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-gradient-to-br from-rose-400 to-pink-400'
-                      }`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-                          {log.tipe === 'masuk' ? <polyline points="9 11 12 14 20 6"/> : <polyline points="16 17 21 12 16 7"/>}
-                        </svg>
-                      </div>
-                      <div>
-                        <p className={`font-semibold text-sm ${log.tipe === 'masuk' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          Absen {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
-                          {log.is_terlambat && (
-                            <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
-                              TERLAMBAT
-                            </span>
+              {todayLogs.map((log) => {
+                const ket = log.tipe === 'masuk'
+                  ? getKeteranganMasuk(log)
+                  : getKeteranganKeluar(log)
+
+                return (
+                  <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
+                          log.tipe === 'masuk' ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-gradient-to-br from-rose-400 to-pink-400'
+                        }`}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                            {log.tipe === 'masuk' ? <polyline points="9 11 12 14 20 6"/> : <polyline points="16 17 21 12 16 7"/>}
+                          </svg>
+                        </div>
+                        <div>
+                          <p className={`font-semibold text-sm ${log.tipe === 'masuk' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                            Absen {log.tipe === 'masuk' ? 'Masuk' : 'Keluar'}
+                            {log.is_terlambat && (
+                              <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
+                                MENYUSUL
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' })}
+                          </p>
+                          {ket && (
+                            <p className={`text-[10px] mt-0.5 font-medium ${
+                              ket.warna === 'terlambat' ? 'text-amber-600'
+                              : ket.warna === 'pulang_cepat' ? 'text-orange-600'
+                              : ket.warna === 'menyusul' ? 'text-amber-600'
+                              : 'text-emerald-600'
+                            }`}>
+                              {ket.detail}
+                            </p>
                           )}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
+                        </div>
                       </div>
+                      <span className={`text-lg font-bold font-mono ${log.tipe === 'masuk' ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' })}
+                      </span>
                     </div>
-                    <span className={`text-lg font-bold font-mono ${log.tipe === 'masuk' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

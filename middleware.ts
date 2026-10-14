@@ -26,8 +26,14 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-  // Belum login: hanya boleh akses /login dan /register
-  if (!user && !path.startsWith('/login') && !path.startsWith('/register') && !path.startsWith('/auth')) {
+    // Belum login: hanya boleh akses /login, /register, /lupa-password, /auth
+  if (
+    !user &&
+    !path.startsWith('/login') &&
+    !path.startsWith('/register') &&
+    !path.startsWith('/lupa-password') &&
+    !path.startsWith('/auth')
+  ) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

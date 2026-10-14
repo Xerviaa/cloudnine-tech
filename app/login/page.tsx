@@ -19,7 +19,6 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    // Ubah email jadi lowercase agar konsisten
     const emailLower = email.trim().toLowerCase()
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -33,7 +32,6 @@ export default function LoginPage() {
       return
     }
 
-    // Cek role: admin → /admin, karyawan → /absen
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const { data: profile } = await supabase
@@ -110,6 +108,16 @@ export default function LoginPage() {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Link Lupa Password */}
+          <div className="text-right">
+            <Link
+              href="/lupa-password"
+              className="text-sm text-blue-600 hover:text-blue-700 hover:underline font-medium"
+            >
+              Lupa password?
+            </Link>
           </div>
 
           {error && (

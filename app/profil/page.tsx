@@ -225,7 +225,7 @@ export default function ProfilPage() {
               </div>
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">KantorAbsensi</p>
+              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
               <p className="text-slate-500 text-xs">Edit Profil</p>
             </div>
           </Link>

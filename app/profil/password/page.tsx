@@ -134,7 +134,7 @@ export default function UbahPasswordPage() {
 
       <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/profil" className="flex items-center gap-3">
+          <Link href="/absen" className="flex items-center gap-3">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl blur-md opacity-50" />
               <div className="relative w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center">
@@ -147,7 +147,7 @@ export default function UbahPasswordPage() {
             </div>
           </Link>
 
-          <Link href="/profil" className="text-slate-700 hover:text-violet-700 text-sm bg-white hover:bg-violet-50 border border-slate-200 hover:border-violet-200 px-4 py-2 rounded-lg transition font-medium">
+          <Link href="/absen" className="text-slate-700 hover:text-violet-700 text-sm bg-white hover:bg-violet-50 border border-slate-200 hover:border-violet-200 px-4 py-2 rounded-lg transition font-medium">
             ← Kembali
           </Link>
         </div>
@@ -282,7 +282,7 @@ export default function UbahPasswordPage() {
             {/* Tombol */}
             <div className="flex gap-3 pt-2">
               <Link
-                href="/profil"
+                href="/absen"
                 className="px-5 py-2.5 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium text-sm transition"
               >
                 Batal
