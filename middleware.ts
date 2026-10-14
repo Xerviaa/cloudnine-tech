@@ -26,14 +26,21 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const path = request.nextUrl.pathname
 
-    // Belum login: hanya boleh akses /login, /register, /lupa-password, /auth
-  if (
-    !user &&
-    !path.startsWith('/login') &&
-    !path.startsWith('/register') &&
-    !path.startsWith('/lupa-password') &&
-    !path.startsWith('/auth')
-  ) {
+  // Path yang boleh diakses tanpa login (publik)
+  const publicPaths = [
+    '/login',
+    '/register',
+    '/lupa-password',
+    '/auth',
+    '/manifest',
+    '/icons',
+    '/favicon',
+  ]
+
+  const isPublicPath = publicPaths.some((p) => path.startsWith(p))
+
+  // Belum login: hanya boleh akses path publik
+  if (!user && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
@@ -50,7 +57,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Sudah login tapi buka /login atau /register → arahkan ke halaman sesuai role
+  // Sudah login tapi buka /login atau /register → arahkan sesuai role
   if (user && (path === '/login' || path === '/register')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -67,6 +74,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)',
   ],
 }
