@@ -4,6 +4,24 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import dynamic from 'next/dynamic'
+
+// Import Leaflet secara dinamis (karena pakai window object)
+const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false })
+const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false })
+const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false })
+const Circle = dynamic(() => import('react-leaflet').then((mod) => mod.Circle), { ssr: false })
+const useMapEvents = dynamic(() => import('react-leaflet').then((mod) => {
+  // Custom hook untuk handle click di peta
+  return function MapClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
+    const map = mod.useMapEvents({
+      click(e) {
+        onClick(e.latlng.lat, e.latlng.lng)
+      },
+    })
+    return null
+  }
+}), { ssr: false })
 
 type CompanySettings = {
   id: number
@@ -18,12 +36,37 @@ type CompanySettings = {
   radius_meter: number
 }
 
+// Custom Icon untuk Leaflet Marker (biar ga broken)
+function getMarkerIcon(lat: number, lng: number) {
+  if (typeof window === 'undefined') return undefined
+  const L = require('leaflet')
+  
+  // Hapus icon default yang broken di Next.js
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  })
+  
+  return new L.Icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41],
+  })
+}
+
 export default function AdminPengaturanPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [settings, setSettings] = useState<CompanySettings | null>(null)
-  
+  const [mounted, setMounted] = useState(false)
+
   // Form State
   const [namaPerusahaan, setNamaPerusahaan] = useState('')
   const [jamMasuk, setJamMasuk] = useState('08:00')
@@ -34,7 +77,7 @@ export default function AdminPengaturanPage() {
   const [longitude, setLongitude] = useState('')
   const [radius, setRadius] = useState('100')
 
-  // State BARU: Berlaku Mulai
+  // State Berlaku Mulai
   const [berlakuMulai, setBerlakuMulai] = useState(() => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -44,6 +87,10 @@ export default function AdminPengaturanPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     async function checkAdmin() {
@@ -92,7 +139,6 @@ export default function AdminPengaturanPage() {
     setSaving(true)
 
     try {
-      // 1. Update company_settings (untuk display utama)
       const { error: updateError } = await supabase
         .from('company_settings')
         .update({
@@ -110,7 +156,6 @@ export default function AdminPengaturanPage() {
 
       if (updateError) throw updateError
 
-      // 2. Simpan ke company_settings_history (untuk logika keterlambatan)
       const { data: { user } } = await supabase.auth.getUser()
       
       const { error: historyError } = await supabase
@@ -196,7 +241,12 @@ export default function AdminPengaturanPage() {
     )
   }
 
-  if (loading) {
+  function handleMapClick(lat: number, lng: number) {
+    setLatitude(lat.toFixed(6))
+    setLongitude(lng.toFixed(6))
+  }
+
+  if (loading || !mounted) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -206,6 +256,12 @@ export default function AdminPengaturanPage() {
       </main>
     )
   }
+
+  const mapCenter: [number, number] = [
+    latitude ? Number(latitude) : -8.650000,
+    longitude ? Number(longitude) : 115.216667,
+  ]
+  const radiusNum = Number(radius) || 100
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -373,7 +429,7 @@ export default function AdminPengaturanPage() {
               <span>📍</span> Lokasi Kantor (Validasi GPS)
             </h2>
             <p className="text-xs text-slate-500 mb-4">
-              Digunakan untuk memastikan karyawan hanya bisa absen saat berada di area kantor.
+              Klik pada peta untuk memilih lokasi kantor. Pin bisa digeser. Lingkaran abu-abu adalah radius validasi.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -411,6 +467,38 @@ export default function AdminPengaturanPage() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <p className="text-[10px] text-slate-400 mt-1">Karyawan tidak bisa absen jika di luar radius ini.</p>
+            </div>
+
+            {/* ============================================================ */}
+            {/* PETA LEAFLET                                                 */}
+            {/* ============================================================ */}
+            <div className="mb-4 rounded-xl overflow-hidden border border-slate-300 shadow-inner" style={{ height: '400px' }}>
+              <MapContainer
+                center={mapCenter}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom={true}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {/* Lingkaran Radius */}
+                <Circle
+                  center={mapCenter}
+                  radius={radiusNum}
+                  pathOptions={{
+                    color: '#6366f1',
+                    fillColor: '#6366f1',
+                    fillOpacity: 0.15,
+                    weight: 2,
+                  }}
+                />
+                {/* Marker Pin */}
+                <Marker position={mapCenter} icon={getMarkerIcon(mapCenter[0], mapCenter[1])} />
+                {/* Klik di peta untuk set koordinat */}
+                <MapClickHandler onClick={handleMapClick} />
+              </MapContainer>
             </div>
 
             <button
