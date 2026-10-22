@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 1. TAMBAHKAN BARIS INI UNTUK MENGAKTIFKAN DARK MODE VIA CLASS */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -12,11 +15,19 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
+/* 2. HAPUS ATAU KOMENTARI BAGIAN INI */
+/* Karena kita pakai tombol, bukan otomatis ikut settingan HP */
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+} */
+
+/* 3. TAMBAHKAN INI AGAR WARNA BACKGROUND OTOMATIS GELAP SAAT TOMBOL DIKLIK */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {

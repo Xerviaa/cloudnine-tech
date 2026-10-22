@@ -8,6 +8,8 @@ import AvatarDropdown from '@/components/AvatarDropdown'
 import * as XLSX from 'xlsx'
 import { LABEL_JAM } from '@/lib/config/jam-kantor'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
+// 1. IMPORT KOMPONEN THEME TOGGLE
+import ThemeToggle from '@/components/ThemeToggle' 
 
 type Profile = {
   id: string
@@ -403,7 +405,7 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
           <p className="text-slate-500 text-sm">Memuat data admin...</p>
@@ -413,14 +415,14 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden transition-colors">
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-3xl transition-colors" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 dark:bg-violet-900/20 rounded-full blur-3xl transition-colors" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl transition-colors" />
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -430,14 +432,14 @@ export default function AdminPage() {
               </div>
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Panel Admin</p>
+              <p className="text-slate-800 dark:text-slate-100 font-bold text-lg leading-tight">AbsenKita</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs">Panel Admin</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Link
               href="/admin/jadwal"
-              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+              className="text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
             >
               <span>📅</span>
               <span className="hidden sm:inline">Kelola Jadwal</span>
@@ -445,7 +447,7 @@ export default function AdminPage() {
 
             <Link
               href="/admin/izin"
-              className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+              className="relative text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
             >
               <span>📋</span>
               <span className="hidden sm:inline">Izin & Cuti</span>
@@ -456,17 +458,21 @@ export default function AdminPage() {
               )}
             </Link>
 
-                        <Link
+            <Link
               href="/admin/pengaturan"
-              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+              className="text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
             >
               <span>⚙️</span>
               <span className="hidden sm:inline">Pengaturan</span>
             </Link>
 
-            <Link href="/absen" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium">
+            <Link href="/absen" className="text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-lg transition font-medium">
               Halaman Absen
             </Link>
+
+            {/* 2. TOMBOL DARK MODE DISISIPKAN DI SINI */}
+            <ThemeToggle />
+
             <AvatarDropdown
               nama={profile?.nama_lengkap || 'Admin'}
               email={profile?.email || ''}
@@ -479,14 +485,14 @@ export default function AdminPage() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-1 mb-3 shadow-sm">
+          <div className="inline-flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full px-3 py-1 mb-3 shadow-sm">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-slate-600">Panel Admin Aktif</span>
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Panel Admin Aktif</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-slate-800">
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100">
             Selamat datang, {profile?.nama_lengkap} 👋
           </h1>
-          <p className="text-slate-500 mt-2">Berikut ringkasan absensi dan data karyawan hari ini</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Berikut ringkasan absensi dan data karyawan hari ini</p>
         </div>
 
         {pendingLeaveCount > 0 && (
@@ -514,23 +520,23 @@ export default function AdminPage() {
           </Link>
         )}
 
-        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
+        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-200 dark:border-slate-700 rounded-2xl p-4 mb-6 transition-colors">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
               ⏰
             </div>
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Kantor</p>
-                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR}</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Kantor</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{LABEL_JAM.JAM_KANTOR}</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
-                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN}</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Pelayanan</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{LABEL_JAM.JAM_PELAYANAN}</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Istirahat</p>
-                <p className="text-xs font-bold text-amber-700">{LABEL_JAM.JAM_ISTIRAHAT}</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Istirahat</p>
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{LABEL_JAM.JAM_ISTIRAHAT}</p>
               </div>
             </div>
           </div>
@@ -586,19 +592,19 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
+        <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 mb-6 transition-colors">
           <div className="flex items-center gap-3 flex-wrap justify-between">
             <div className="flex items-center gap-3 flex-wrap">
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg shadow-indigo-500/30">
                 📅
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 block">Filter Tanggal</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Filter Tanggal</label>
                 <input
                   type="date"
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
-                  className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
+                  className="mt-0.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium"
                 />
               </div>
             </div>
@@ -618,19 +624,19 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/50 to-violet-50/50 flex-wrap gap-3">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-6 transition-colors">
+          <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-indigo-50/50 to-violet-50/50 dark:from-slate-800 dark:to-slate-800 flex-wrap gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
                 📋
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-800">
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
                   Absensi — {new Date(filterDate).toLocaleDateString('id-ID', {
                     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
                   })}
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   {filteredAttendance.filter((a) => a.status !== 'belum_absen' && a.status !== 'libur').length} dari {filteredAttendance.length} karyawan sudah absen
                   {filteredAttendance.length !== attendance.length && ` (filtered dari ${attendance.length})`}
                 </p>
@@ -648,14 +654,14 @@ export default function AdminPage() {
                   placeholder="Cari nama karyawan..."
                   value={searchAbsensi}
                   onChange={(e) => setSearchAbsensi(e.target.value)}
-                  className="pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-56"
+                  className="pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-56"
                 />
               </div>
 
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
               >
                 <option value="semua">Semua Status</option>
                 <option value="lengkap">✅ Lengkap</option>
@@ -670,7 +676,7 @@ export default function AdminPage() {
           {filteredAttendance.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-6xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 text-sm font-medium">
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
                 {attendance.length === 0 ? 'Belum ada karyawan terdaftar' : 'Tidak ada data yang cocok dengan filter'}
               </p>
             </div>
@@ -678,14 +684,14 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-left border-b border-slate-100">
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Karyawan</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Masuk</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Istirahat</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Selesai</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keluar</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Lokasi</th>
+                  <tr className="bg-slate-50 dark:bg-slate-900 text-left border-b border-slate-100 dark:border-slate-700">
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Karyawan</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Masuk</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Istirahat</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Selesai</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Keluar</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Lokasi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -694,8 +700,8 @@ export default function AdminPage() {
                     const telatIstirahatSelesai = isIstirahatTelat(a.istirahatSelesai)
 
                     return (
-                      <tr key={a.user.id} className={`border-t border-slate-100 hover:bg-indigo-50/40 transition ${
-                        a.status === 'lupa_absen_keluar' ? 'bg-amber-50/30' : ''
+                      <tr key={a.user.id} className={`border-t border-slate-100 dark:border-slate-700 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50 transition ${
+                        a.status === 'lupa_absen_keluar' ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''
                       }`}>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
@@ -709,7 +715,7 @@ export default function AdminPage() {
                                 <img
                                   src={a.user.avatar_url}
                                   alt={a.user.nama_lengkap}
-                                  className="w-9 h-9 rounded-full object-cover ring-2 ring-white shadow-md transition group-hover/photo:scale-110 group-hover/photo:ring-indigo-400"
+                                  className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-md transition group-hover/photo:scale-110 group-hover/photo:ring-indigo-400"
                                 />
                                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center">
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -734,7 +740,7 @@ export default function AdminPage() {
                                 href={`/admin/karyawan/${a.user.id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="font-semibold text-slate-800 text-xs hover:text-indigo-600 hover:underline transition inline-flex items-center gap-1"
+                                className="font-semibold text-slate-800 dark:text-slate-100 text-xs hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition inline-flex items-center gap-1"
                               >
                                 {a.user.nama_lengkap}
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -744,7 +750,7 @@ export default function AdminPage() {
                                 </svg>
                               </Link>
                               {a.user.role === 'admin' && (
-                                <p className="text-[10px] text-violet-600 font-medium">Admin</p>
+                                <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">Admin</p>
                               )}
                             </div>
                           </div>
@@ -752,26 +758,26 @@ export default function AdminPage() {
 
                         <td className="px-4 py-4">
                           {a.masuk ? (
-                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2 py-1 rounded-lg">
                               {formatTime(a.masuk.waktu_absen)}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">--:--</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
                           )}
                         </td>
 
                         <td className="px-4 py-4">
                           {a.istirahatMulai ? (
                             <div className="flex flex-col gap-0.5">
-                              <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
+                              <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg">
                                 ☕ {formatTime(a.istirahatMulai.waktu_absen)}
                               </span>
                               {telatIstirahatMulai && (
-                                <span className="text-[9px] text-amber-600 font-medium pl-1">Terlambat</span>
+                                <span className="text-[9px] text-amber-600 dark:text-amber-400 font-medium pl-1">Terlambat</span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">--:--</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
                           )}
                         </td>
 
@@ -780,57 +786,57 @@ export default function AdminPage() {
                             <div className="flex flex-col gap-0.5">
                               <span className={`inline-flex items-center gap-1 font-mono text-xs font-medium border px-2 py-1 rounded-lg ${
                                 telatIstirahatSelesai
-                                  ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                  : 'text-blue-700 bg-blue-50 border-blue-200'
+                                  ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'
+                                  : 'text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800'
                               }`}>
                                 💪 {formatTime(a.istirahatSelesai.waktu_absen)}
                               </span>
                               {telatIstirahatSelesai && (
-                                <span className="text-[9px] text-amber-600 font-medium pl-1">Terlambat</span>
+                                <span className="text-[9px] text-amber-600 dark:text-amber-400 font-medium pl-1">Terlambat</span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">--:--</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
                           )}
                         </td>
 
                         <td className="px-4 py-4">
                           {a.keluar ? (
-                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 px-2 py-1 rounded-lg">
                               {formatTime(a.keluar.waktu_absen)}
                             </span>
                           ) : a.menyusul ? (
-                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-amber-700 bg-amber-100 border border-amber-300 px-2 py-1 rounded-lg">
+                            <span className="inline-flex items-center gap-1 font-mono text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 border border-amber-300 dark:border-amber-700 px-2 py-1 rounded-lg">
                               ⏰ {formatTime(a.menyusul.waktu_absen)}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">--:--</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
                           )}
                         </td>
 
                         <td className="px-4 py-4">
                           {a.status === 'lengkap' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700">
                               ✅ Lengkap
                             </span>
                           )}
                           {a.status === 'belum_keluar' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
                               🟡 Belum Keluar
                             </span>
                           )}
                           {a.status === 'lupa_absen_keluar' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700">
                               🟠 Lupa Keluar
                             </span>
                           )}
                           {a.status === 'belum_absen' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600">
                               ⚪ Belum Absen
                             </span>
                           )}
                           {a.status === 'libur' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-300">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-700">
                               🏖️ Libur
                             </span>
                           )}
@@ -844,7 +850,7 @@ export default function AdminPage() {
                                   href={`https://www.google.com/maps?q=${a.masuk.latitude},${a.masuk.longitude}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 hover:border-emerald-600 px-2 py-1 rounded-lg transition"
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:text-white bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-600 border border-emerald-200 dark:border-emerald-800 hover:border-emerald-600 px-2 py-1 rounded-lg transition"
                                 >
                                   🟢 Masuk
                                 </a>
@@ -854,14 +860,14 @@ export default function AdminPage() {
                                   href={`https://www.google.com/maps?q=${a.keluar.latitude},${a.keluar.longitude}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 px-2 py-1 rounded-lg transition"
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-rose-600 dark:text-rose-400 hover:text-white bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-600 border border-rose-200 dark:border-rose-800 hover:border-rose-600 px-2 py-1 rounded-lg transition"
                                 >
                                   🔴 Keluar
                                 </a>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">-</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">-</span>
                           )}
                         </td>
                       </tr>
@@ -903,7 +909,7 @@ export default function AdminPage() {
           onClick={() => !exporting && setShowExportModal(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-5">
@@ -932,34 +938,34 @@ export default function AdminPage() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Mulai</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tanggal Mulai</label>
                 <input
                   type="date"
                   value={exportStartDate}
                   onChange={(e) => setExportStartDate(e.target.value)}
                   disabled={exporting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50 dark:disabled:bg-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tanggal Akhir</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tanggal Akhir</label>
                 <input
                   type="date"
                   value={exportEndDate}
                   onChange={(e) => setExportEndDate(e.target.value)}
                   disabled={exporting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50 dark:disabled:bg-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tipe Absen</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipe Absen</label>
                 <select
                   value={exportTipe}
                   onChange={(e) => setExportTipe(e.target.value as any)}
                   disabled={exporting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50 cursor-pointer"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:bg-slate-50 dark:disabled:bg-slate-900 cursor-pointer"
                 >
                   <option value="semua">Semua Tipe</option>
                   <option value="masuk">Masuk</option>
@@ -969,20 +975,20 @@ export default function AdminPage() {
                 </select>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex items-start gap-2">
-                <span className="text-emerald-600 text-lg">💡</span>
-                <p className="text-xs text-emerald-700 leading-snug">
+              <div className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-emerald-600 dark:text-emerald-400 text-lg">💡</span>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-snug">
                   File akan di-export sebagai <strong>Excel (.xlsx)</strong> dengan nama otomatis sesuai rentang tanggal.
                 </p>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => setShowExportModal(false)}
                 disabled={exporting}
-                className="px-4 py-2 text-sm text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition disabled:opacity-50"
+                className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg transition disabled:opacity-50"
               >
                 Batal
               </button>
