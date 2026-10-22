@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import * as XLSX from 'xlsx'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
@@ -307,380 +306,351 @@ export default function KaryawanDetailPage() {
 
   if (loading || !profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat data karyawan...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data karyawan...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   const { jalan, wilayah } = formatAlamat(profile)
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      {/* Card Profil */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+        <div className="flex flex-col sm:flex-row items-start gap-5">
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.nama_lengkap}
+              className="w-24 h-24 rounded-full object-cover ring-4 ring-white dark:ring-slate-700 shadow-lg shrink-0"
+            />
+          ) : (
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0 ${
+              profile.role === 'admin'
+                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
+                : 'bg-gradient-to-br from-sky-500 to-cyan-500'
+            }`}>
+              {getInitials(profile.nama_lengkap)}
+            </div>
+          )}
+
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 transition-colors">{profile.nama_lengkap}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 transition-colors">{profile.email}</p>
+
+            <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+              profile.role === 'admin'
+                ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800'
+                : 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800'
+            }`}>
+              {profile.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
+            </span>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-start gap-2">
+                <span className="text-slate-400 text-sm mt-0.5">📱</span>
+                <div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Nomor HP</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{profile.nomor_hp || 'Belum diisi'}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-slate-400 text-sm mt-0.5">📍</span>
+                <div>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Alamat</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-snug">
+                    {jalan && <span>{jalan}<br /></span>}
+                    {wilayah || 'Belum diisi'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+      {/* Filter Bulan & Export */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 mb-6 transition-colors">
+        <div className="flex items-center gap-3 flex-wrap justify-between">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
+              📅
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Detail Karyawan</p>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Pilih Bulan</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="mt-0.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium cursor-pointer"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
-          </Link>
+          </div>
 
-          <Link
-            href="/admin"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
+          <button
+            onClick={handleExportPersonal}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
           >
-            ← Kembali
-          </Link>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" x2="12" y1="15" y2="3"/>
+            </svg>
+            {exporting ? 'Menyiapkan...' : 'Export Rekap Bulan Ini'}
+          </button>
         </div>
-      </header>
+      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        {/* Card Profil */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex flex-col sm:flex-row items-start gap-5">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.nama_lengkap}
-                className="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-lg shrink-0"
-              />
-            ) : (
-              <div className={`w-24 h-24 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shrink-0 ${
-                profile.role === 'admin'
-                  ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
-                  : 'bg-gradient-to-br from-sky-500 to-cyan-500'
-              }`}>
-                {getInitials(profile.nama_lengkap)}
-              </div>
-            )}
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-5 shadow-lg shadow-emerald-500/25">
+          <p className="text-white/90 text-xs font-medium">Total Hadir</p>
+          <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalHadir}</p>
+          <p className="text-white/70 text-[10px] mt-1">hari dalam bulan ini</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 shadow-lg shadow-amber-500/25">
+          <p className="text-white/90 text-xs font-medium">Terlambat</p>
+          <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalTelat}</p>
+          <p className="text-white/70 text-[10px] mt-1">kali masuk telat</p>
+        </div>
+        <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-5 shadow-lg shadow-rose-500/25">
+          <p className="text-white/90 text-xs font-medium">Lupa Absen</p>
+          <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalLupaAbsen}</p>
+          <p className="text-white/70 text-[10px] mt-1">lupa absen keluar</p>
+        </div>
+        <div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl p-5 shadow-lg shadow-slate-500/25">
+          <p className="text-white/90 text-xs font-medium">Belum Absen</p>
+          <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalBelumAbsen}</p>
+          <p className="text-white/70 text-[10px] mt-1">hari kerja tanpa absen</p>
+        </div>
+      </div>
 
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-slate-800">{profile.nama_lengkap}</h1>
-              <p className="text-sm text-slate-500 mt-1">{profile.email}</p>
-
-              <span className={`inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${
-                profile.role === 'admin'
-                  ? 'bg-violet-50 text-violet-700 border-violet-200'
-                  : 'bg-sky-50 text-sky-700 border-sky-200'
-              }`}>
-                {profile.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
-              </span>
-
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="flex items-start gap-2">
-                  <span className="text-slate-400 text-sm mt-0.5">📱</span>
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-medium">Nomor HP</p>
-                    <p className="text-sm text-slate-700 font-medium">{profile.nomor_hp || 'Belum diisi'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-slate-400 text-sm mt-0.5">📍</span>
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-medium">Alamat</p>
-                    <p className="text-sm text-slate-700 font-medium leading-snug">
-                      {jalan && <span>{jalan}<br /></span>}
-                      {wilayah || 'Belum diisi'}
-                    </p>
-                  </div>
-                </div>
-              </div>
+      {/* Grafik */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              📊
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Kehadiran Per Minggu</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Rekap mingguan bulan {selectedMonth}</p>
             </div>
           </div>
+          <div className="w-full h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1e293b',
+                    border: '1px solid #334155',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    color: '#f1f5f9',
+                  }}
+                />
+                <Bar dataKey="hadir" fill="#10b981" name="Hadir" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="telat" fill="#f59e0b" name="Telat" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="lupa" fill="#f97316" name="Lupa Absen" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="belum" fill="#94a3b8" name="Belum Absen" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        {/* Filter Bulan & Export */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
-          <div className="flex items-center gap-3 flex-wrap justify-between">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white text-lg shadow-lg">
-                📅
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 block">Pilih Bulan</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium cursor-pointer"
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              🥧
             </div>
-
-            <button
-              onClick={handleExportPersonal}
-              disabled={exporting}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" x2="12" y1="15" y2="3"/>
-              </svg>
-              {exporting ? 'Menyiapkan...' : 'Export Rekap Bulan Ini'}
-            </button>
-          </div>
-        </div>
-
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-5 shadow-lg shadow-emerald-500/25">
-            <p className="text-white/90 text-xs font-medium">Total Hadir</p>
-            <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalHadir}</p>
-            <p className="text-white/70 text-[10px] mt-1">hari dalam bulan ini</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 shadow-lg shadow-amber-500/25">
-            <p className="text-white/90 text-xs font-medium">Terlambat</p>
-            <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalTelat}</p>
-            <p className="text-white/70 text-[10px] mt-1">kali masuk telat</p>
-          </div>
-          <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-5 shadow-lg shadow-rose-500/25">
-            <p className="text-white/90 text-xs font-medium">Lupa Absen</p>
-            <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalLupaAbsen}</p>
-            <p className="text-white/70 text-[10px] mt-1">lupa absen keluar</p>
-          </div>
-          <div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl p-5 shadow-lg shadow-slate-500/25">
-            <p className="text-white/90 text-xs font-medium">Belum Absen</p>
-            <p className="text-white text-3xl font-bold mt-1 drop-shadow-sm">{stats.totalBelumAbsen}</p>
-            <p className="text-white/70 text-[10px] mt-1">hari kerja tanpa absen</p>
-          </div>
-        </div>
-
-        {/* Grafik */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                📊
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Kehadiran Per Minggu</h2>
-                <p className="text-xs text-slate-500">Rekap mingguan bulan {selectedMonth}</p>
-              </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Distribusi Status</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Perbandingan hari</p>
             </div>
-            <div className="w-full h-[280px]">
+          </div>
+          {pieData.length === 0 ? (
+            <div className="h-[240px] flex items-center justify-center">
+              <p className="text-slate-400 dark:text-slate-500 text-sm">Belum ada data</p>
+            </div>
+          ) : (
+            <div className="w-full h-[240px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} />
-                  <YAxis tick={{ fontSize: 12, fill: '#64748b' }} allowDecimals={false} />
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
                       borderRadius: '8px',
                       fontSize: '12px',
+                      color: '#f1f5f9',
                     }}
                   />
-                  <Bar dataKey="hadir" fill="#10b981" name="Hadir" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="telat" fill="#f59e0b" name="Telat" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="lupa" fill="#f97316" name="Lupa Absen" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="belum" fill="#94a3b8" name="Belum Absen" radius={[4, 4, 0, 0]} />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                🥧
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Distribusi Status</h2>
-                <p className="text-xs text-slate-500">Perbandingan hari</p>
-              </div>
-            </div>
-            {pieData.length === 0 ? (
-              <div className="h-[240px] flex items-center justify-center">
-                <p className="text-slate-400 text-sm">Belum ada data</p>
-              </div>
-            ) : (
-              <div className="w-full h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={index} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-            <div className="mt-2 space-y-1.5">
-              {pieData.map((d) => (
-                <div key={d.name} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                    <span className="text-slate-600">{d.name}</span>
-                  </div>
-                  <span className="font-semibold text-slate-800">{d.value} hari</span>
+          )}
+          <div className="mt-2 space-y-1.5">
+            {pieData.map((d) => (
+              <div key={d.name} className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+                  <span className="text-slate-600 dark:text-slate-300">{d.name}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Tabel Riwayat Harian */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                📋
+                <span className="font-semibold text-slate-800 dark:text-slate-100">{d.value} hari</span>
               </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Riwayat Absensi Harian</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Bulan {monthOptions.find((m) => m.value === selectedMonth)?.label} — {dailyRecords.length} hari
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-left border-b border-slate-100">
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Tanggal</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Hari</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Masuk</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Istirahat</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Selesai</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Keluar</th>
-                  <th className="px-4 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dailyRecords.map((r) => {
-                  const dayName = r.dateObj.toLocaleDateString('id-ID', { weekday: 'short' })
-                  const dateStr = r.dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
-                  const isWeekend = r.dateObj.getDay() === 0 || r.dateObj.getDay() === 6
-
-                  return (
-                    <tr
-                      key={r.date}
-                      className={`border-t border-slate-100 transition ${
-                        isWeekend ? 'bg-slate-50/50' : 'hover:bg-indigo-50/30'
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs font-medium text-slate-700">{dateStr}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium ${isWeekend ? 'text-rose-500' : 'text-slate-600'}`}>
-                          {dayName}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.masuk ? (
-                          <span className={`inline-flex items-center gap-1 font-mono text-xs font-medium px-2 py-1 rounded-lg border ${
-                            r.masuk.is_terlambat
-                              ? 'text-amber-700 bg-amber-50 border-amber-200'
-                              : 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                          }`}>
-                            {formatTime(r.masuk.waktu_absen)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">--:--</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.istirahatMulai ? (
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg">
-                            ☕ {formatTime(r.istirahatMulai.waktu_absen)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">--:--</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.istirahatSelesai ? (
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">
-                            💪 {formatTime(r.istirahatSelesai.waktu_absen)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">--:--</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.keluar ? (
-                          <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded-lg">
-                            {formatTime(r.keluar.waktu_absen)}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">--:--</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {r.status === 'lengkap' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-300">
-                            ✅ Lengkap
-                          </span>
-                        )}
-                        {r.status === 'belum_keluar' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-300">
-                            🟡 Belum Keluar
-                          </span>
-                        )}
-                        {r.status === 'lupa_absen_keluar' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 border border-orange-300">
-                            🟠 Lupa Keluar
-                          </span>
-                        )}
-                        {r.status === 'belum_absen' && !isWeekend && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-300">
-                            ⚪ Belum Absen
-                          </span>
-                        )}
-                        {r.status === 'libur' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400 border border-slate-200">
-                            🏖️ Libur
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            ))}
           </div>
         </div>
       </div>
-    </main>
+
+      {/* Tabel Riwayat Harian */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 dark:from-slate-800 dark:to-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              📋
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Riwayat Absensi Harian</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Bulan {monthOptions.find((m) => m.value === selectedMonth)?.label} — {dailyRecords.length} hari
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-900 text-left border-b border-slate-100 dark:border-slate-700">
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Tanggal</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Hari</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Masuk</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Istirahat</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Selesai</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Keluar</th>
+                <th className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyRecords.map((r) => {
+                const dayName = r.dateObj.toLocaleDateString('id-ID', { weekday: 'short' })
+                const dateStr = r.dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })
+                const isWeekend = r.dateObj.getDay() === 0 || r.dateObj.getDay() === 6
+
+                return (
+                  <tr
+                    key={r.date}
+                    className={`border-t border-slate-100 dark:border-slate-700 transition ${
+                      isWeekend ? 'bg-slate-50/50 dark:bg-slate-900/50' : 'hover:bg-indigo-50/30 dark:hover:bg-slate-700/50'
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs font-medium text-slate-700 dark:text-slate-300">{dateStr}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium ${isWeekend ? 'text-rose-500 dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                        {dayName}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.masuk ? (
+                        <span className={`inline-flex items-center gap-1 font-mono text-xs font-medium px-2 py-1 rounded-lg border ${
+                          r.masuk.is_terlambat
+                            ? 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'
+                            : 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'
+                        }`}>
+                          {formatTime(r.masuk.waktu_absen)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.istirahatMulai ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-lg">
+                          ☕ {formatTime(r.istirahatMulai.waktu_absen)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.istirahatSelesai ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-2 py-1 rounded-lg">
+                          💪 {formatTime(r.istirahatSelesai.waktu_absen)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.keluar ? (
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 px-2 py-1 rounded-lg">
+                          {formatTime(r.keluar.waktu_absen)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-500 italic">--:--</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.status === 'lengkap' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700">
+                          ✅ Lengkap
+                        </span>
+                      )}
+                      {r.status === 'belum_keluar' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700">
+                          🟡 Belum Keluar
+                        </span>
+                      )}
+                      {r.status === 'lupa_absen_keluar' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 border border-orange-300 dark:border-orange-700">
+                          🟠 Lupa Keluar
+                        </span>
+                      )}
+                      {r.status === 'belum_absen' && !isWeekend && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600">
+                          ⚪ Belum Absen
+                        </span>
+                      )}
+                      {r.status === 'libur' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600">
+                          🏖️ Libur
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   )
 }
