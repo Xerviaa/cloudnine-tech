@@ -58,8 +58,8 @@ export default function HeaderGlobal({ profile, type }: Props) {
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 shadow-sm transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         
-        {/* Logo dan Judul Dinamis */}
-        <Link href={type === 'admin' ? '/admin' : '/absen'} className="flex items-center gap-3 shrink-0">
+        {/* Logo dan Judul Dinamis - SEKARANG MENGARAH KE /profil-perusahaan */}
+        <Link href="/profil-perusahaan" className="flex items-center gap-3 shrink-0">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
             {/* Jika ada logo dari database, tampilkan gambar. Jika tidak, tampilkan ikon gedung */}
