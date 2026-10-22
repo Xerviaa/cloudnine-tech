@@ -13,12 +13,11 @@ type Props = {
 export default function HeaderGlobal({ profile, type }: Props) {
   const pathname = usePathname()
 
-  // Daftar menu untuk karyawan
+  // Daftar menu untuk karyawan (Menu Profil sudah dihapus)
   const menuKaryawan = [
     { name: 'Absen', href: '/absen' },
     { name: 'Jadwal Saya', href: '/jadwal-saya' },
     { name: 'Ajukan Izin', href: '/izin' },
-    { name: 'Profil', href: '/profil' },
   ]
 
   // Daftar menu untuk admin
