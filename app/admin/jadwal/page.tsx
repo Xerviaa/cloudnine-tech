@@ -155,7 +155,9 @@ export default function AdminJadwalPage() {
     setSaving(true)
 
     try {
-      const dateObj = new Date(selectedDate)
+            // Fix Timezone: Parse manual dari string YYYY-MM-DD agar tidak bergeser
+      const [y, m, d] = selectedDate.split('-').map(Number)
+      const dateObj = new Date(y, m - 1, d)
       const isWeekendDay = isWeekend(dateObj)
       
       // Tipe default untuk yang dicentang
@@ -369,7 +371,8 @@ export default function AdminJadwalPage() {
               const weekend = isWeekend(date)
               const stats = getDayStats(date)
               const hasSchedule = schedules.some((s) => s.tanggal === dateStr)
-              const isToday = dateStr === new Date().toISOString().split('T')[0]
+  const nowWITA = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Makassar' }).split(',')[0]
+const isToday = dateStr === nowWITA
 
               let bgColor = 'bg-white hover:bg-slate-50'
               let borderColor = 'border-slate-200'
@@ -457,9 +460,14 @@ export default function AdminJadwalPage() {
                     Atur Jadwal
                   </h2>
                   <p className="text-white/80 text-xs">
-                    {new Date(selectedDate).toLocaleDateString('id-ID', {
-                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-                    })}
+                    {/* Fix Timezone: Parse manual dari string YYYY-MM-DD */}
+                    {(() => {
+                      const [y, m, d] = selectedDate.split('-').map(Number)
+                      const dateObj = new Date(y, m - 1, d)
+                      return dateObj.toLocaleDateString('id-ID', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                      })
+                    })()}
                   </p>
                 </div>
                 <button
