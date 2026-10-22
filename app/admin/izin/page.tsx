@@ -11,6 +11,8 @@ type Profile = {
   email: string
   role: 'karyawan' | 'admin'
   avatar_url: string | null
+  jatah_cuti: number
+  cuti_terpakai: number
 }
 
 type LeaveRequest = {
@@ -128,7 +130,7 @@ export default function AdminIzinPage() {
 
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
-      .select('id, nama_lengkap, email, avatar_url, role')
+      .select('id, nama_lengkap, email, avatar_url, role, jatah_cuti, cuti_terpakai')
       .in('id', userIds)
 
     if (profilesError) {
@@ -154,6 +156,7 @@ export default function AdminIzinPage() {
 
     setProcessing(selectedRequest.id)
     try {
+      // 1. Update status pengajuan
       const { error } = await supabase
         .from('leave_requests')
         .update({
@@ -168,6 +171,29 @@ export default function AdminIzinPage() {
         alert('Gagal update: ' + error.message)
         setProcessing(null)
         return
+      }
+
+      // 2. Jika disetujui & tipe cuti, tambah cuti_terpakai karyawan
+      if (action === 'disetujui' && selectedRequest.tipe === 'cuti') {
+        const durasi = hitungHari(selectedRequest.tanggal_mulai, selectedRequest.tanggal_selesai)
+        
+        const { data: userProfile } = await supabase
+          .from('profiles')
+          .select('cuti_terpakai')
+          .eq('id', selectedRequest.user_id)
+          .single()
+
+        if (userProfile) {
+          const newCutiTerpakai = (userProfile.cuti_terpakai || 0) + durasi
+          const { error: updateCutiError } = await supabase
+            .from('profiles')
+            .update({ cuti_terpakai: newCutiTerpakai })
+            .eq('id', selectedRequest.user_id)
+
+          if (updateCutiError) {
+            alert('Gagal update kuota cuti: ' + updateCutiError.message)
+          }
+        }
       }
 
       alert(`✅ Pengajuan ${action === 'disetujui' ? 'disetujui' : 'ditolak'}!`)

@@ -10,6 +10,8 @@ type Profile = {
   email: string
   role: 'karyawan' | 'admin'
   avatar_url: string | null
+  jatah_cuti: number
+  cuti_terpakai: number
 }
 
 type LeaveRequest = {
@@ -178,6 +180,16 @@ export default function IzinPage() {
       return
     }
 
+    // VALIDASI KUOTA CUTI
+    if (tipe === 'cuti') {
+      const durasi = hitungHari(tanggalMulai, tanggalSelesai)
+      const sisaCuti = profile.jatah_cuti - profile.cuti_terpakai
+      if (durasi > sisaCuti) {
+        alert(`❌ Sisa kuota cuti Anda tidak mencukupi.\n\nSisa cuti: ${sisaCuti} hari\nPengajuan: ${durasi} hari`)
+        return
+      }
+    }
+
     if (tipe === 'sakit' && !file) {
       alert('Untuk pengajuan Sakit, wajib upload foto Surat Dokter.')
       return
@@ -303,6 +315,8 @@ export default function IzinPage() {
     )
   }
 
+  const sisaCuti = profile.jatah_cuti - profile.cuti_terpakai
+
   return (
     <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
@@ -336,6 +350,23 @@ export default function IzinPage() {
             </>
           )}
         </button>
+      </div>
+
+      {/* Info Sisa Cuti */}
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl p-4 mb-6 shadow-lg shadow-emerald-500/25 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white text-xl">
+            🌴
+          </div>
+          <div>
+            <p className="text-xs text-white/90 font-medium">Sisa Kuota Cuti Anda</p>
+            <p className="text-2xl font-bold text-white">{sisaCuti} <span className="text-sm font-normal">hari</span></p>
+          </div>
+        </div>
+        <div className="text-right text-xs text-white/80">
+          <p>Jatah: {profile.jatah_cuti} hari</p>
+          <p>Terpakai: {profile.cuti_terpakai} hari</p>
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -401,6 +432,16 @@ export default function IzinPage() {
               </div>
             )}
 
+            {/* Info kuota untuk cuti */}
+            {tipe === 'cuti' && (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-lg">ℹ️</span>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-snug">
+                  Sisa kuota cuti Anda saat ini: <strong>{sisaCuti} hari</strong>. Pengajuan akan otomatis ditolak jika melebihi kuota.
+                </p>
+              </div>
+            )}
+
             {/* Tanggal */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -427,9 +468,20 @@ export default function IzinPage() {
             </div>
 
             {tanggalMulai && tanggalSelesai && new Date(tanggalMulai) <= new Date(tanggalSelesai) && (
-              <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-2 text-center">
-                <p className="text-xs text-indigo-700 dark:text-indigo-400 font-medium">
+              <div className={`rounded-lg p-2 text-center ${
+                tipe === 'cuti' && hitungHari(tanggalMulai, tanggalSelesai) > sisaCuti
+                  ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800'
+                  : 'bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800'
+              }`}>
+                <p className={`text-xs font-medium ${
+                  tipe === 'cuti' && hitungHari(tanggalMulai, tanggalSelesai) > sisaCuti
+                    ? 'text-rose-700 dark:text-rose-400'
+                    : 'text-indigo-700 dark:text-indigo-400'
+                }`}>
                   📅 Total: <strong>{hitungHari(tanggalMulai, tanggalSelesai)} hari</strong>
+                  {tipe === 'cuti' && hitungHari(tanggalMulai, tanggalSelesai) > sisaCuti && (
+                    <span> — Melebihi sisa cuti ({sisaCuti} hari)</span>
+                  )}
                 </p>
               </div>
             )}
@@ -641,6 +693,7 @@ export default function IzinPage() {
             <ul className="list-disc list-inside space-y-0.5 ml-1">
               <li>Pengajuan akan diperiksa oleh admin</li>
               <li>Pengajuan <strong>Sakit</strong> wajib upload Surat Dokter</li>
+              <li>Pengajuan <strong>Cuti</strong> dibatasi oleh sisa kuota Anda</li>
               <li>Pengajuan yang <strong>pending</strong> bisa dibatalkan sendiri</li>
               <li>Pengajuan yang sudah <strong>disetujui/ditolak</strong> tidak bisa diubah</li>
             </ul>
