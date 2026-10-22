@@ -63,7 +63,6 @@ export default function AbsenPage() {
       .order('waktu_absen', { ascending: true })
     setTodayLogs(today || [])
 
-    // Cek absen masuk kemarin yang belum ada keluar setelahnya
     const { data: pending } = await supabase
       .from('attendance_logs').select('*').eq('user_id', userId)
       .eq('tipe', 'masuk')
@@ -285,9 +284,7 @@ export default function AbsenPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* ============================================================ */}
-            {/* TOMBOL AJUKAN IZIN untuk karyawan                              */}
-            {/* ============================================================ */}
+            {/* Tombol Ajukan Izin */}
             <Link
               href="/izin"
               className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
@@ -300,6 +297,16 @@ export default function AbsenPage() {
                   {pendingLeaveCount > 9 ? '9+' : pendingLeaveCount}
                 </span>
               )}
+            </Link>
+
+            {/* TOMBOL BARU: JADWAL SAYA */}
+            <Link
+              href="/jadwal-saya"
+              className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
+            >
+              <span>📅</span>
+              <span className="hidden sm:inline">Jadwal Saya</span>
+              <span className="sm:hidden">Jadwal</span>
             </Link>
 
             {profile?.role === 'admin' && (
@@ -350,9 +357,7 @@ export default function AbsenPage() {
           </div>
         </div>
 
-        {/* ============================================================ */}
-        {/* BANNER AJUKAN IZIN                                           */}
-        {/* ============================================================ */}
+        {/* Banner Ajukan Izin */}
         <Link
           href="/izin"
           className="block mb-6 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-2xl p-5 shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:-translate-y-1 relative overflow-hidden group"
@@ -382,7 +387,7 @@ export default function AbsenPage() {
           )}
         </Link>
 
-        {/* Info Jam Kantor & Jam Pelayanan & Jam Istirahat */}
+        {/* Info Jam */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
@@ -554,7 +559,7 @@ export default function AbsenPage() {
           )}
         </div>
 
-        {/* Kartu Ringkasan - 4 kartu */}
+        {/* Kartu Ringkasan */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200' : 'border-slate-200'}`}>
             <div className="flex items-center gap-2 mb-3">
