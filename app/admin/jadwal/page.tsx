@@ -97,46 +97,32 @@ export default function AdminJadwalPage() {
     const firstDay = new Date(year, month - 1, 1)
     const lastDay = new Date(year, month, 0)
     const daysInMonth = lastDay.getDate()
-
-    // Hari pertama dalam minggu (0 = Minggu, 1 = Senin, ...)
     const firstDayOfWeek = firstDay.getDay()
-    // Konversi ke Senin = 0, Minggu = 6
     const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
 
     const days: (Date | null)[] = []
-
-    // Padding kosong di awal
-    for (let i = 0; i < startOffset; i++) {
-      days.push(null)
-    }
-
-    // Isi tanggal
+    for (let i = 0; i < startOffset; i++) days.push(null)
     for (let d = 1; d <= daysInMonth; d++) {
       days.push(new Date(year, month - 1, d))
     }
-
     return days
   }, [selectedMonth])
 
-  // Cek apakah hari ini adalah weekend
   function isWeekend(date: Date) {
     const day = date.getDay()
     return day === 0 || day === 6
   }
 
-  // Ambil jumlah karyawan masuk per tanggal
   function getDayStats(date: Date) {
     const dateStr = date.toISOString().split('T')[0]
     const daySchedules = schedules.filter((s) => s.tanggal === dateStr)
     
-    const lemburCount = daySchedules.filter((s) => s.tipe === 'lembur').length
-    const kerjaCount = daySchedules.filter((s) => s.tipe === 'kerja').length
-    const liburCount = daySchedules.filter((s) => s.tipe === 'libur').length
+    // Hitung yang masuk/lembur (hanya yang ada di tabel schedule)
+    const masukCount = daySchedules.filter((s) => s.tipe === 'kerja' || s.tipe === 'lembur').length
 
-    return { lemburCount, kerjaCount, liburCount, total: employees.length }
+    return { masukCount }
   }
 
-  // Buka modal untuk atur tanggal
   function openDateModal(date: Date) {
     const dateStr = date.toISOString().split('T')[0]
     const daySchedules = schedules.filter((s) => s.tanggal === dateStr)
@@ -153,7 +139,6 @@ export default function AdminJadwalPage() {
     setSelectedEmployees(selected)
   }
 
-  // Toggle checkbox karyawan
   function toggleEmployee(userId: string) {
     const newSet = new Set(selectedEmployees)
     if (newSet.has(userId)) {
@@ -172,6 +157,9 @@ export default function AdminJadwalPage() {
     try {
       const dateObj = new Date(selectedDate)
       const isWeekendDay = isWeekend(dateObj)
+      
+      // Tipe default untuk yang dicentang
+      // Jika Sabtu/Minggu = 'lembur', jika Senin-Jumat = 'kerja'
       const defaultTipe = isWeekendDay ? 'lembur' : 'kerja'
 
       // Hapus semua jadwal untuk tanggal ini
@@ -180,32 +168,20 @@ export default function AdminJadwalPage() {
         .delete()
         .eq('tanggal', selectedDate)
 
-      // Insert jadwal baru
-      const rows = Array.from(selectedEmployees).map((userId) => ({
-        user_id: userId,
-        tanggal: selectedDate,
-        tipe: defaultTipe,
-        created_by: profile.id,
-      }))
-
-      // Insert yang masuk kerja/lembur
-      if (rows.length > 0) {
-        const { error } = await supabase.from('employee_schedules').insert(rows)
-        if (error) throw error
-      }
-
-      // Insert yang libur (yang tidak dipilih)
-      const liburRows = employees
-        .filter((emp) => !selectedEmployees.has(emp.id))
-        .map((emp) => ({
+      // Siapkan baris baru
+      const rows = employees.map((emp) => {
+        const isChecked = selectedEmployees.has(emp.id)
+        return {
           user_id: emp.id,
           tanggal: selectedDate,
-          tipe: 'libur',
+          tipe: isChecked ? defaultTipe : 'libur',
           created_by: profile.id,
-        }))
+        }
+      })
 
-      if (liburRows.length > 0) {
-        const { error } = await supabase.from('employee_schedules').insert(liburRows)
+      // Insert semua
+      if (rows.length > 0) {
+        const { error } = await supabase.from('employee_schedules').insert(rows)
         if (error) throw error
       }
 
@@ -219,56 +195,7 @@ export default function AdminJadwalPage() {
     }
   }
 
-  // Bulk action: Set semua Minggu libur
-  async function setAllSundaysOff() {
-    if (!confirm('Set semua hari MINGGU di bulan ini sebagai libur untuk semua karyawan?')) return
-    if (!profile) return
-    
-    setSaving(true)
-    try {
-      const [year, month] = selectedMonth.split('-').map(Number)
-      const lastDay = new Date(year, month, 0).getDate()
-
-      const rows: any[] = []
-      for (let d = 1; d <= lastDay; d++) {
-        const date = new Date(year, month - 1, d)
-        if (date.getDay() === 0) {
-          const dateStr = date.toISOString().split('T')[0]
-          employees.forEach((emp) => {
-            rows.push({
-              user_id: emp.id,
-              tanggal: dateStr,
-              tipe: 'libur',
-              created_by: profile.id,
-            })
-          })
-        }
-      }
-
-      // Hapus dulu jadwal Minggu yang ada
-      for (let d = 1; d <= lastDay; d++) {
-        const date = new Date(year, month - 1, d)
-        if (date.getDay() === 0) {
-          const dateStr = date.toISOString().split('T')[0]
-          await supabase.from('employee_schedules').delete().eq('tanggal', dateStr)
-        }
-      }
-
-      if (rows.length > 0) {
-        const { error } = await supabase.from('employee_schedules').insert(rows)
-        if (error) throw error
-      }
-
-      await loadSchedules()
-      alert(`✅ ${rows.length} jadwal libur Minggu berhasil diset!`)
-    } catch (err: any) {
-      alert('Gagal: ' + err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // Bulk action: Reset bulan ini
+  // Reset bulan ini
   async function resetMonth() {
     if (!confirm('Hapus semua jadwal di bulan ini? (Tindakan tidak bisa dibatalkan)')) return
     
@@ -364,7 +291,7 @@ export default function AdminJadwalPage() {
           </p>
         </div>
 
-        {/* Filter & Bulk Actions */}
+        {/* Filter & Actions */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
           <div className="flex items-center gap-3 flex-wrap justify-between">
             <div className="flex items-center gap-3 flex-wrap">
@@ -386,13 +313,6 @@ export default function AdminJadwalPage() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={setAllSundaysOff}
-                disabled={saving}
-                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                🗓️ Set Libur Minggu
-              </button>
               <button
                 onClick={resetMonth}
                 disabled={saving}
@@ -426,7 +346,6 @@ export default function AdminJadwalPage() {
 
         {/* Kalender */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          {/* Header Hari */}
           <div className="grid grid-cols-7 gap-2 mb-2">
             {dayNames.map((day, idx) => (
               <div
@@ -440,7 +359,6 @@ export default function AdminJadwalPage() {
             ))}
           </div>
 
-          {/* Grid Tanggal */}
           <div className="grid grid-cols-7 gap-2">
             {calendarDays.map((date, idx) => {
               if (!date) {
@@ -450,16 +368,18 @@ export default function AdminJadwalPage() {
               const dateStr = date.toISOString().split('T')[0]
               const weekend = isWeekend(date)
               const stats = getDayStats(date)
-              const hasSchedule = stats.kerjaCount + stats.lemburCount + stats.liburCount > 0
+              const hasSchedule = schedules.some((s) => s.tanggal === dateStr)
               const isToday = dateStr === new Date().toISOString().split('T')[0]
 
-              // Determine background color
               let bgColor = 'bg-white hover:bg-slate-50'
               let borderColor = 'border-slate-200'
               let textColor = 'text-slate-800'
 
               if (hasSchedule) {
-                if (stats.lemburCount > 0) {
+                // Jika ada yang lembur (di weekend) -> orange
+                // Atau jika weekend tapi tidak ada yang lembur -> biru (libur semua)
+                // Atau jika weekday -> hijau (kerja)
+                if (weekend && stats.masukCount > 0) {
                   bgColor = 'bg-orange-50 hover:bg-orange-100'
                   borderColor = 'border-orange-300'
                   textColor = 'text-orange-900'
@@ -497,14 +417,9 @@ export default function AdminJadwalPage() {
 
                   {hasSchedule && (
                     <div className="w-full space-y-0.5">
-                      {(stats.kerjaCount + stats.lemburCount) > 0 && (
-                        <div className={`text-[9px] font-semibold ${stats.lemburCount > 0 ? 'text-orange-700' : 'text-emerald-700'} truncate`}>
-                          👥 {stats.kerjaCount + stats.lemburCount} masuk
-                        </div>
-                      )}
-                      {stats.liburCount > 0 && (
-                        <div className="text-[9px] font-semibold text-blue-600 truncate">
-                          🏖️ {stats.liburCount} libur
+                      {stats.masukCount > 0 && (
+                        <div className={`text-[9px] font-semibold ${weekend ? 'text-orange-700' : 'text-emerald-700'} truncate`}>
+                          👥 {stats.masukCount} masuk
                         </div>
                       )}
                     </div>
@@ -532,7 +447,6 @@ export default function AdminJadwalPage() {
             className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="bg-gradient-to-r from-indigo-500 to-violet-600 p-5">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center text-white text-lg">
@@ -558,11 +472,10 @@ export default function AdminJadwalPage() {
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-5 overflow-y-auto flex-1">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-medium text-slate-700">
-                  Pilih karyawan yang <strong>MASUK</strong>:
+                  Centang karyawan yang <strong>MASUK</strong>:
                 </p>
                 <span className="text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-semibold">
                   {selectedEmployees.size} / {employees.length} dipilih
@@ -621,7 +534,6 @@ export default function AdminJadwalPage() {
               </div>
             </div>
 
-            {/* Footer */}
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-between items-center">
               <button
                 type="button"

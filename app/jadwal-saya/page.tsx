@@ -140,12 +140,40 @@ export default function JadwalSayaPage() {
   }
 
   // Ambil semua hari libur di bulan ini (untuk dropdown asal)
+  // Termasuk hari Sabtu/Minggu yang tidak ada di database (default libur)
   const hariLiburBulanIni = useMemo(() => {
-    return schedules
-      .filter((s) => s.tipe === 'libur')
-      .sort((a, b) => a.tanggal.localeCompare(b.tanggal))
-  }, [schedules])
+    const [year, month] = selectedMonth.split('-').map(Number)
+    const daysInMonth = new Date(year, month, 0).getDate()
+    const liburList: { id: string; tanggal: string }[] = []
 
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(year, month - 1, d)
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      
+      const sch = schedules.find((s) => s.tanggal === dateStr)
+      
+      // Logika: 
+      // 1. Jika ada di database dan tipenya 'libur' -> Libur
+      // 2. Jika tidak ada di database TAPI hari Sabtu/Minggu -> Libur (default)
+      // 3. Jika ada di database dan tipenya 'kerja'/'lembur' -> BUKAN Libur (jangan dimasukkan)
+      
+      let isLibur = false
+      if (sch) {
+        isLibur = sch.tipe === 'libur'
+      } else {
+        isLibur = isWeekend(dateObj)
+      }
+
+      if (isLibur) {
+        liburList.push({
+          id: dateStr, // pakai string tanggal sebagai id unik
+          tanggal: dateStr
+        })
+      }
+    }
+
+    return liburList
+  }, [schedules, selectedMonth])
   // Cek apakah tanggal tertentu libur
   function isLibur(dateStr: string): boolean {
     const sch = schedules.find((s) => s.tanggal === dateStr)
