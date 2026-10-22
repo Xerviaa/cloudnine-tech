@@ -21,7 +21,7 @@ export default function HeaderGlobal({ profile, type }: Props) {
     { name: 'Profil', href: '/profil' },
   ]
 
-  // Daftar menu untuk admin (SUDAH DITAMBAHKAN HALAMAN ABSEN)
+  // Daftar menu untuk admin
   const menuAdmin = [
     { name: 'Dashboard', href: '/admin' },
     { name: 'Kelola Jadwal', href: '/admin/jadwal' },
@@ -31,6 +31,9 @@ export default function HeaderGlobal({ profile, type }: Props) {
   ]
 
   const menus = type === 'admin' ? menuAdmin : menuKaryawan
+
+  // Cek apakah user adalah admin tapi sedang di halaman karyawan
+  const isAdminInKaryawanPage = type === 'karyawan' && profile?.role === 'admin'
 
   return (
     <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 shadow-sm transition-colors">
@@ -52,6 +55,17 @@ export default function HeaderGlobal({ profile, type }: Props) {
 
         {/* Menu Navigasi Desktop & Tablet */}
         <nav className="hidden md:flex items-center gap-1 bg-slate-100/50 dark:bg-slate-800/50 p-1 rounded-xl border border-slate-200 dark:border-slate-700 mx-4 overflow-x-auto no-scrollbar">
+          
+          {/* Tombol Dashboard Admin (Muncul jika admin sedang di halaman karyawan) */}
+          {isAdminInKaryawanPage && (
+            <Link
+              href="/admin"
+              className="px-4 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-800 mr-1"
+            >
+              👑 Dashboard Admin
+            </Link>
+          )}
+
           {menus.map((menu) => (
             <Link
               key={menu.href}
@@ -81,6 +95,17 @@ export default function HeaderGlobal({ profile, type }: Props) {
 
       {/* Menu Navigasi HP (Scrollable) */}
       <div className="md:hidden px-4 pb-3 overflow-x-auto no-scrollbar flex gap-2">
+        
+        {/* Tombol Dashboard Admin untuk HP */}
+        {isAdminInKaryawanPage && (
+          <Link
+            href="/admin"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-800"
+          >
+            👑 Admin
+          </Link>
+        )}
+
         {menus.map((menu) => (
           <Link
             key={menu.href}
