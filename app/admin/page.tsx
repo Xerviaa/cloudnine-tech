@@ -43,7 +43,14 @@ type UserAttendance = {
   menyusul: AttendanceLog | null
   istirahatMulai: AttendanceLog | null
   istirahatSelesai: AttendanceLog | null
-  status: 'belum_absen' | 'belum_keluar' | 'lengkap' | 'lupa_absen_keluar'
+  status: 'belum_absen' | 'belum_keluar' | 'lengkap' | 'lupa_absen_keluar' | 'libur'
+}
+
+type Schedule = {
+  id: number
+  user_id: string
+  tanggal: string
+  tipe: 'libur' | 'kerja' | 'lembur'
 }
 
 function pairMasukKeluar(logs: AttendanceLog[]): Map<number, AttendanceLog | null> {
@@ -76,21 +83,20 @@ export default function AdminPage() {
   const [rawLogs, setRawLogs] = useState<AttendanceLog[]>([])
   const [allLogs, setAllLogs] = useState<AttendanceLog[]>([])
   const [attendance, setAttendance] = useState<UserAttendance[]>([])
+  const [schedules, setSchedules] = useState<Schedule[]>([])
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
   const [editingUser, setEditingUser] = useState<Profile | null>(null)
   const [exporting, setExporting] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [viewingPhoto, setViewingPhoto] = useState<Profile | null>(null)
 
-  // ============================================================
-  // TAMBAHAN: State untuk jumlah pengajuan izin pending
-  // ============================================================
+  // State untuk jumlah pengajuan izin pending
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
 
   const [searchKaryawan, setSearchKaryawan] = useState('')
   const [filterRole, setFilterRole] = useState<'semua' | 'admin' | 'karyawan'>('semua')
   const [searchAbsensi, setSearchAbsensi] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'semua' | 'lengkap' | 'belum_keluar' | 'lupa_absen_keluar' | 'belum_absen'>('semua')
+  const [filterStatus, setFilterStatus] = useState<'semua' | 'lengkap' | 'belum_keluar' | 'lupa_absen_keluar' | 'belum_absen' | 'libur'>('semua')
 
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportStartDate, setExportStartDate] = useState(() => {
@@ -153,6 +159,9 @@ export default function AdminPage() {
     }
   }, [viewingPhoto, showExportModal])
 
+  // ============================================================
+  // Grouping absensi - dengan integrasi data jadwal (libur)
+  // ============================================================
   useEffect(() => {
     if (!users.length) {
       setAttendance([])
@@ -191,17 +200,22 @@ export default function AdminPage() {
         }
       }
 
+      // Cek jadwal libur
+      const userSchedule = schedules.find((s) => s.user_id === u.id)
+      const isLibur = userSchedule && userSchedule.tipe === 'libur'
+
       let status: UserAttendance['status'] = 'belum_absen'
       if (masuk && keluar) status = 'lengkap'
       else if (masuk && menyusul) status = 'lupa_absen_keluar'
       else if (masuk) status = 'belum_keluar'
+      else if (isLibur) status = 'libur' // Kalau ngga ada absen & jadwalnya libur
       else status = 'belum_absen'
 
       return { user: u, masuk, keluar, menyusul, istirahatMulai, istirahatSelesai, status }
     })
 
     setAttendance(grouped)
-  }, [users, rawLogs, allLogs, filterDate])
+  }, [users, rawLogs, allLogs, filterDate, schedules])
 
   async function loadData() {
     const { data: usersData } = await supabase
@@ -232,9 +246,15 @@ export default function AdminPage() {
 
     setAllLogs((allLogsData as any) || [])
 
-    // ============================================================
-    // TAMBAHAN: Hitung jumlah pengajuan izin yang pending
-    // ============================================================
+    // Ambil data jadwal untuk tanggal ini
+    const { data: schedData } = await supabase
+      .from('employee_schedules')
+      .select('*')
+      .eq('tanggal', filterDate)
+
+    setSchedules((schedData as any) || [])
+
+    // Hitung jumlah pengajuan izin yang pending
     const { count: pendingCount } = await supabase
       .from('leave_requests')
       .select('*', { count: 'exact', head: true })
@@ -479,9 +499,6 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* ============================================================ */}
-            {/* TOMBOL KELOLA JADWAL BARU */}
-            {/* ============================================================ */}
             <Link
               href="/admin/jadwal"
               className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
@@ -490,9 +507,6 @@ export default function AdminPage() {
               <span className="hidden sm:inline">Kelola Jadwal</span>
             </Link>
 
-            {/* ============================================================ */}
-            {/* TAMBAHAN: Tombol Kelola Izin & Cuti dengan badge notifikasi */}
-            {/* ============================================================ */}
             <Link
               href="/admin/izin"
               className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
@@ -531,9 +545,6 @@ export default function AdminPage() {
           <p className="text-slate-500 mt-2">Berikut ringkasan absensi dan data karyawan hari ini</p>
         </div>
 
-        {/* ============================================================ */}
-        {/* TAMBAHAN: Card Alert jika ada pengajuan izin pending          */}
-        {/* ============================================================ */}
         {pendingLeaveCount > 0 && (
           <Link
             href="/admin/izin"
@@ -559,7 +570,6 @@ export default function AdminPage() {
           </Link>
         )}
 
-        {/* Info Jam */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
@@ -582,7 +592,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
           <div className="group relative bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-500 rounded-2xl p-6 shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 transition-all hover:-translate-y-1 overflow-hidden">
             <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition" />
@@ -633,7 +642,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Filter Tanggal & Export */}
         <div className="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
           <div className="flex items-center gap-3 flex-wrap justify-between">
             <div className="flex items-center gap-3 flex-wrap">
@@ -666,7 +674,6 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Tabel Absensi */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/50 to-violet-50/50 flex-wrap gap-3">
             <div className="flex items-center gap-3">
@@ -680,7 +687,7 @@ export default function AdminPage() {
                   })}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  {filteredAttendance.filter((a) => a.status !== 'belum_absen').length} dari {filteredAttendance.length} karyawan sudah absen
+                  {filteredAttendance.filter((a) => a.status !== 'belum_absen' && a.status !== 'libur').length} dari {filteredAttendance.length} karyawan sudah absen
                   {filteredAttendance.length !== attendance.length && ` (filtered dari ${attendance.length})`}
                 </p>
               </div>
@@ -711,6 +718,7 @@ export default function AdminPage() {
                 <option value="belum_keluar">🟡 Belum Keluar</option>
                 <option value="lupa_absen_keluar">🟠 Lupa Keluar</option>
                 <option value="belum_absen">⚪ Belum Absen</option>
+                <option value="libur">🏖️ Libur</option>
               </select>
             </div>
           </div>
@@ -877,6 +885,11 @@ export default function AdminPage() {
                               ⚪ Belum Absen
                             </span>
                           )}
+                          {a.status === 'libur' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-300">
+                              🏖️ Libur
+                            </span>
+                          )}
                         </td>
 
                         <td className="px-4 py-4">
@@ -916,7 +929,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Kelola Karyawan */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-violet-50/50 to-fuchsia-50/50 flex-wrap gap-3">
             <div className="flex items-center gap-3">
@@ -1113,7 +1125,6 @@ export default function AdminPage() {
         onSave={handleSaveUser}
       />
 
-      {/* TAHAP 2: MODAL EXPORT CUSTOM */}
       {showExportModal && (
         <div
           className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
@@ -1230,7 +1241,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* MODAL FOTO PEGAWAI */}
       {viewingPhoto && viewingPhoto.avatar_url && (
         <div
           className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-sm"
