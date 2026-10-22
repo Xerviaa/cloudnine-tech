@@ -63,13 +63,27 @@ export default function ProfilPerusahaanPage() {
 
   return (
     <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
-      {/* Header Profil Perusahaan - DIPERCANTIK */}
+      {/* Header Profil Perusahaan - DENGAN BACKGROUND IT */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-indigo-500/10 border border-slate-200 dark:border-slate-700 overflow-hidden mb-8 transition-colors relative">
-        {/* Background Pattern */}
-        <div className="h-40 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20" />
-          <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl -ml-10 -mb-10" />
+        
+        {/* Background Pattern Bertema IT (Circuit/Matrix) */}
+        <div className="h-40 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 relative overflow-hidden">
+          {/* Layer Pola Sirkuit */}
+          <div 
+            className="absolute inset-0 opacity-20" 
+            style={{ 
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              backgroundSize: '30px 30px'
+            }} 
+          />
+          {/* Efek Cahaya */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-400/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-40 h-40 bg-fuchsia-500/20 rounded-full blur-3xl -ml-10 -mb-10 pointer-events-none" />
+          
+          {/* Kode-kode kecil di background (Opsional, efek hacker) */}
+          <div className="absolute inset-0 opacity-10 font-mono text-[10px] text-white leading-tight overflow-hidden break-all p-4">
+            {`const company = new CloudNine(); function init() { return true; } 01001010 01100001 01110110 01100001 01110011 01100011 01110010 01101001 01110000 01110100; <div>Hello World</div>; import { Future } from 'tech';`}
+          </div>
         </div>
         
         <div className="px-8 pb-8">
@@ -87,6 +101,7 @@ export default function ProfilPerusahaanPage() {
                   🏢
                 </div>
               )}
+              
               {/* Badge Terverifikasi */}
               <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full ring-4 ring-white dark:ring-slate-800 shadow-lg" title="Perusahaan Terverifikasi">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -112,7 +127,7 @@ export default function ProfilPerusahaanPage() {
         </div>
       </div>
 
-      {/* Info Grid - DIPERCANTIK */}
+      {/* Info Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Jam Operasional */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors hover:shadow-md">
@@ -186,7 +201,7 @@ export default function ProfilPerusahaanPage() {
         </div>
       </div>
 
-      {/* Tentang Perusahaan - DIPERCANTIK & DESKRIPSI BARU */}
+      {/* Tentang Perusahaan */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-3xl p-8 shadow-2xl shadow-indigo-500/30 text-white">
         {/* Dekorasi Background */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
