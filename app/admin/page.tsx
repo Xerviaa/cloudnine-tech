@@ -90,7 +90,6 @@ export default function AdminPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [viewingPhoto, setViewingPhoto] = useState<Profile | null>(null)
 
-  // State untuk jumlah pengajuan izin pending
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
 
   const [searchKaryawan, setSearchKaryawan] = useState('')
@@ -160,7 +159,7 @@ export default function AdminPage() {
   }, [viewingPhoto, showExportModal])
 
   // ============================================================
-  // Grouping absensi - dengan integrasi data jadwal (libur)
+  // Grouping absensi - Integrasi dengan jadwal libur
   // ============================================================
   useEffect(() => {
     if (!users.length) {
@@ -200,15 +199,29 @@ export default function AdminPage() {
         }
       }
 
-      // Cek jadwal libur
+      // ============================================================
+      // LOGIKA BARU: Cek jadwal libur
+      // 1. Jika ada di database jadwal, cek tipenya
+      // 2. Jika TIDAK ada di database, cek apakah hari ini weekend (Sabtu/Minggu)
+      // ============================================================
       const userSchedule = schedules.find((s) => s.user_id === u.id)
-      const isLibur = userSchedule && userSchedule.tipe === 'libur'
+      let isLibur = false
+
+      if (userSchedule) {
+        isLibur = userSchedule.tipe === 'libur'
+      } else {
+        // Fallback: jika tidak ada jadwal (misal admin), cek weekend
+        const [y, m, d] = filterDate.split('-').map(Number)
+        const dateObj = new Date(y, m - 1, d)
+        const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
+        if (weekend) isLibur = true
+      }
 
       let status: UserAttendance['status'] = 'belum_absen'
       if (masuk && keluar) status = 'lengkap'
       else if (masuk && menyusul) status = 'lupa_absen_keluar'
       else if (masuk) status = 'belum_keluar'
-      else if (isLibur) status = 'libur' // Kalau ngga ada absen & jadwalnya libur
+      else if (isLibur) status = 'libur'
       else status = 'belum_absen'
 
       return { user: u, masuk, keluar, menyusul, istirahatMulai, istirahatSelesai, status }
@@ -254,7 +267,6 @@ export default function AdminPage() {
 
     setSchedules((schedData as any) || [])
 
-    // Hitung jumlah pengajuan izin yang pending
     const { count: pendingCount } = await supabase
       .from('leave_requests')
       .select('*', { count: 'exact', head: true })
