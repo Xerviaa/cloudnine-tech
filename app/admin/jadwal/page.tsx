@@ -57,10 +57,12 @@ export default function AdminJadwalPage() {
       }
       setProfile(profileData)
 
+      // ============================================================
+      // FIX: Load SEMUA karyawan (termasuk admin) tanpa filter
+      // ============================================================
       const { data: empData } = await supabase
         .from('profiles')
         .select('*')
-        .neq('role', 'admin')
         .order('nama_lengkap')
       setEmployees(empData || [])
 
@@ -88,9 +90,6 @@ export default function AdminJadwalPage() {
     setSchedules((data as any) || [])
   }
 
-  // ============================================================
-  // FIX: calendarDays return array of string 'YYYY-MM-DD' atau null
-  // ============================================================
   const calendarDays = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const firstDay = new Date(year, month - 1, 1)
@@ -139,7 +138,6 @@ export default function AdminJadwalPage() {
     setSaving(true)
 
     try {
-      // Parse manual string 'YYYY-MM-DD'
       const [y, m, d] = selectedDate.split('-').map(Number)
       const dateObj = new Date(y, m - 1, d)
       const isWeekendDay = dateObj.getDay() === 0 || dateObj.getDay() === 6
@@ -341,12 +339,10 @@ export default function AdminJadwalPage() {
                 return <div key={`empty-${idx}`} className="aspect-square" />
               }
 
-              // Parse manual string 'YYYY-MM-DD' agar tidak geser hari
               const [y, m, d] = dateStr.split('-').map(Number)
               const dateObj = new Date(y, m - 1, d)
               const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
 
-              // Tanggal hari ini dalam format YYYY-MM-DD (lokal)
               const today = new Date()
               const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
@@ -437,7 +433,6 @@ export default function AdminJadwalPage() {
                     Atur Jadwal
                   </h2>
                   <p className="text-white/80 text-xs">
-                    {/* FIX: Parse manual string YYYY-MM-DD */}
                     {(() => {
                       const [y, m, d] = selectedDate.split('-').map(Number)
                       const dateObj = new Date(y, m - 1, d)
@@ -470,7 +465,6 @@ export default function AdminJadwalPage() {
               <div className="space-y-1.5">
                 {employees.map((emp) => {
                   const isChecked = selectedEmployees.has(emp.id)
-                  // Parse manual string 'YYYY-MM-DD'
                   const [y, m, d] = selectedDate.split('-').map(Number)
                   const dateObj = new Date(y, m - 1, d)
                   const isWeekendDay = dateObj.getDay() === 0 || dateObj.getDay() === 6
@@ -498,13 +492,22 @@ export default function AdminJadwalPage() {
                           className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold bg-gradient-to-br from-sky-500 to-cyan-500 shadow-sm">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm ${
+                          emp.role === 'admin' 
+                            ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600' 
+                            : 'bg-gradient-to-br from-sky-500 to-cyan-500'
+                        }`}>
                           {getInitials(emp.nama_lengkap)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-slate-800 truncate">
                           {emp.nama_lengkap}
+                          {emp.role === 'admin' && (
+                            <span className="ml-1.5 text-[9px] bg-violet-100 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded-full font-bold">
+                              Admin
+                            </span>
+                          )}
                         </p>
                         <p className="text-[10px] text-slate-500 truncate">{emp.email}</p>
                       </div>
