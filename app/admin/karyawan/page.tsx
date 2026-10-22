@@ -145,244 +145,212 @@ export default function AdminKaryawanPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat data karyawan...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data karyawan...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 transition-colors">
+          👥 Kelola Karyawan
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">
+          {users.length} orang terdaftar
+        </p>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-gradient-to-r from-violet-50/50 to-fuchsia-50/50 dark:from-slate-800 dark:to-slate-800 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-500/30">
+              👥
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Kelola Karyawan</p>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
-          >
-            ← Kembali
-          </Link>
-        </div>
-      </header>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            👥 Kelola Karyawan
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            {users.length} orang terdaftar
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-violet-50/50 to-fuchsia-50/50 flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-violet-500/30">
-                👥
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-800">Daftar Karyawan</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {filteredUsers.length} dari {users.length} orang
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input
-                  type="text"
-                  placeholder="Cari nama atau email..."
-                  value={searchKaryawan}
-                  onChange={(e) => setSearchKaryawan(e.target.value)}
-                  className="pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent w-56"
-                />
-              </div>
-
-              <select
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value as any)}
-                className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent cursor-pointer"
-              >
-                <option value="semua">Semua Role</option>
-                <option value="admin">👑 Admin</option>
-                <option value="karyawan">👤 Karyawan</option>
-              </select>
+              <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Daftar Karyawan</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                {filteredUsers.length} dari {users.length} orang
+              </p>
             </div>
           </div>
 
-          {filteredUsers.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-6xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 text-sm font-medium">
-                {users.length === 0 ? 'Belum ada karyawan terdaftar' : 'Tidak ada data yang cocok dengan filter'}
-              </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                type="text"
+                placeholder="Cari nama atau email..."
+                value={searchKaryawan}
+                onChange={(e) => setSearchKaryawan(e.target.value)}
+                className="pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent w-56"
+              />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50 text-left border-b border-slate-100">
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Karyawan</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Nomor HP</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Alamat</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider">Role</th>
-                    <th className="px-6 py-3 font-semibold text-slate-600 text-xs uppercase tracking-wider text-right">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((u) => {
-                    const { jalan, wilayah } = formatAlamat(u)
-                    return (
-                      <tr key={u.id} className="border-t border-slate-100 hover:bg-violet-50/40 transition">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {u.avatar_url ? (
-                              <button
-                                type="button"
-                                onClick={() => setViewingPhoto(u)}
-                                className="relative cursor-zoom-in group/photo shrink-0"
-                                title="Klik untuk lihat foto"
-                              >
-                                <img
-                                  src={u.avatar_url}
-                                  alt={u.nama_lengkap}
-                                  className="w-10 h-10 rounded-full object-cover ring-2 ring-white shadow-md transition group-hover/photo:scale-110 group-hover/photo:ring-indigo-400"
-                                />
-                                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center">
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                    <line x1="11" y1="8" x2="11" y2="14"/>
-                                    <line x1="8" y1="11" x2="14" y2="11"/>
-                                  </svg>
-                                </div>
-                              </button>
-                            ) : (
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0 ${
-                                u.role === 'admin'
-                                  ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-violet-500/30'
-                                  : 'bg-gradient-to-br from-sky-500 to-cyan-500 shadow-sky-500/30'
-                              }`}>
-                                {getInitials(u.nama_lengkap)}
-                              </div>
-                            )}
-                            <div>
-                              <Link
-                                href={`/admin/karyawan/${u.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-semibold text-slate-800 hover:text-indigo-600 hover:underline transition inline-flex items-center gap-1"
-                              >
-                                {u.nama_lengkap}
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                                  <polyline points="15 3 21 3 21 9"/>
-                                  <line x1="10" y1="14" x2="21" y2="3"/>
-                                </svg>
-                              </Link>
-                              {u.id === profile?.id && (
-                                <p className="text-[10px] text-indigo-600 font-medium">Anda</p>
-                              )}
-                            </div>
-                          </div>
-                        </td>
 
-                        <td className="px-6 py-4 text-slate-500 text-xs">{u.email}</td>
+            <select
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value as any)}
+              className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent cursor-pointer"
+            >
+              <option value="semua">Semua Role</option>
+              <option value="admin">👑 Admin</option>
+              <option value="karyawan">👤 Karyawan</option>
+            </select>
+          </div>
+        </div>
 
-                        <td className="px-6 py-4">
-                          {u.nomor_hp ? (
+        {filteredUsers.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-6xl mb-3 opacity-40">📭</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              {users.length === 0 ? 'Belum ada karyawan terdaftar' : 'Tidak ada data yang cocok dengan filter'}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-900 text-left border-b border-slate-100 dark:border-slate-700">
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Karyawan</th>
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Nomor HP</th>
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Alamat</th>
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-xs uppercase tracking-wider text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => {
+                  const { jalan, wilayah } = formatAlamat(u)
+                  return (
+                    <tr key={u.id} className="border-t border-slate-100 dark:border-slate-700 hover:bg-violet-50/40 dark:hover:bg-slate-700/50 transition">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          {u.avatar_url ? (
                             <button
-                              onClick={() => handleCopyPhone(u.id, u.nomor_hp || '')}
-                              title="Klik untuk salin nomor HP"
-                              className={`inline-flex items-center gap-1 font-mono text-xs font-medium border px-2.5 py-1 rounded-lg transition cursor-pointer ${
-                                copiedId === u.id
-                                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                                  : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-                              }`}
+                              type="button"
+                              onClick={() => setViewingPhoto(u)}
+                              className="relative cursor-zoom-in group/photo shrink-0"
+                              title="Klik untuk lihat foto"
                             >
-                              {copiedId === u.id ? '✓ Tersalin' : `📱 ${u.nomor_hp}`}
+                              <img
+                                src={u.avatar_url}
+                                alt={u.nama_lengkap}
+                                className="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-md transition group-hover/photo:scale-110 group-hover/photo:ring-indigo-400"
+                              />
+                              <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover/photo:opacity-100 transition flex items-center justify-center">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="11" cy="11" r="8"/>
+                                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                  <line x1="11" y1="8" x2="11" y2="14"/>
+                                  <line x1="8" y1="11" x2="14" y2="11"/>
+                                </svg>
+                              </div>
                             </button>
                           ) : (
-                            <span className="text-xs text-slate-400 italic">-</span>
-                          )}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          {jalan || wilayah ? (
-                            <div className="flex flex-col gap-0.5 max-w-xs">
-                              {jalan && (
-                                <p className="text-xs text-slate-700 font-medium leading-snug">{jalan}</p>
-                              )}
-                              {wilayah && (
-                                <p className="text-[11px] text-slate-500 leading-snug">{wilayah}</p>
-                              )}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-md shrink-0 ${
+                              u.role === 'admin'
+                                ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-violet-500/30'
+                                : 'bg-gradient-to-br from-sky-500 to-cyan-500 shadow-sky-500/30'
+                            }`}>
+                              {getInitials(u.nama_lengkap)}
                             </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">Belum diisi</span>
                           )}
-                        </td>
+                          <div>
+                            <Link
+                              href={`/admin/karyawan/${u.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition inline-flex items-center gap-1"
+                            >
+                              {u.nama_lengkap}
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                              </svg>
+                            </Link>
+                            {u.id === profile?.id && (
+                              <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">Anda</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
 
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                            u.role === 'admin'
-                              ? 'bg-violet-50 text-violet-700 border-violet-200'
-                              : 'bg-sky-50 text-sky-700 border-sky-200'
-                          }`}>
-                            {u.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
-                          </span>
-                        </td>
+                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{u.email}</td>
 
-                        <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4">
+                        {u.nomor_hp ? (
                           <button
-                            onClick={() => setEditingUser(u)}
-                            className="text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium transition mr-1"
+                            onClick={() => handleCopyPhone(u.id, u.nomor_hp || '')}
+                            title="Klik untuk salin nomor HP"
+                            className={`inline-flex items-center gap-1 font-mono text-xs font-medium border px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                              copiedId === u.id
+                                ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                                : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                            }`}
                           >
-                            ✏️ Edit
+                            {copiedId === u.id ? '✓ Tersalin' : `📱 ${u.nomor_hp}`}
                           </button>
-                          <button
-                            onClick={() => handleDeleteUser(u)}
-                            disabled={u.id === profile?.id}
-                            className="text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 hover:border-rose-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-rose-600 px-3 py-1.5 rounded-lg text-xs font-medium transition"
-                          >
-                            🗑️ Hapus
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">-</span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {jalan || wilayah ? (
+                          <div className="flex flex-col gap-0.5 max-w-xs">
+                            {jalan && (
+                              <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-snug">{jalan}</p>
+                            )}
+                            {wilayah && (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">{wilayah}</p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500 italic">Belum diisi</span>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
+                          u.role === 'admin'
+                            ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border-violet-200 dark:border-violet-800'
+                            : 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-800'
+                        }`}>
+                          {u.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => setEditingUser(u)}
+                          className="text-indigo-600 dark:text-indigo-400 hover:text-white hover:bg-indigo-600 border border-indigo-200 dark:border-indigo-800 hover:border-indigo-600 px-3 py-1.5 rounded-lg text-xs font-medium transition mr-1"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(u)}
+                          disabled={u.id === profile?.id}
+                          className="text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600 border border-rose-200 dark:border-rose-800 hover:border-rose-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-rose-600 dark:disabled:hover:text-rose-400 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                        >
+                          🗑️ Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <EditUserModal
@@ -436,6 +404,6 @@ export default function AdminKaryawanPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }
