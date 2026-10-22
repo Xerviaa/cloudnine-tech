@@ -6,22 +6,11 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import dynamic from 'next/dynamic'
 
-// Import Leaflet secara dinamis (karena pakai window object)
-const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), { ssr: false })
-const TileLayer = dynamic(() => import('react-leaflet').then((mod) => mod.TileLayer), { ssr: false })
-const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), { ssr: false })
-const Circle = dynamic(() => import('react-leaflet').then((mod) => mod.Circle), { ssr: false })
-const useMapEvents = dynamic(() => import('react-leaflet').then((mod) => {
-  // Custom hook untuk handle click di peta
-  return function MapClickHandler({ onClick }: { onClick: (lat: number, lng: number) => void }) {
-    const map = mod.useMapEvents({
-      click(e) {
-        onClick(e.latlng.lat, e.latlng.lng)
-      },
-    })
-    return null
-  }
-}), { ssr: false })
+// IMPORT KOMPONEN PETA YANG BARU KITA BUAT
+const MapComponent = dynamic(() => import('./MapComponent'), { 
+  ssr: false,
+  loading: () => <div className="h-full w-full bg-slate-100 animate-pulse rounded-xl flex items-center justify-center text-slate-400">Memuat Peta...</div>
+})
 
 type CompanySettings = {
   id: number
@@ -34,30 +23,6 @@ type CompanySettings = {
   latitude_kantor: number | null
   longitude_kantor: number | null
   radius_meter: number
-}
-
-// Custom Icon untuk Leaflet Marker (biar ga broken)
-function getMarkerIcon(lat: number, lng: number) {
-  if (typeof window === 'undefined') return undefined
-  const L = require('leaflet')
-  
-  // Hapus icon default yang broken di Next.js
-  delete (L.Icon.Default.prototype as any)._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  })
-  
-  return new L.Icon({
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41],
-  })
 }
 
 export default function AdminPengaturanPage() {
@@ -470,35 +435,14 @@ export default function AdminPengaturanPage() {
             </div>
 
             {/* ============================================================ */}
-            {/* PETA LEAFLET                                                 */}
+            {/* PETA LEAFLET (SUDAH DIGANTI DENGAN KOMPONEN BARU)            */}
             {/* ============================================================ */}
             <div className="mb-4 rounded-xl overflow-hidden border border-slate-300 shadow-inner" style={{ height: '400px' }}>
-              <MapContainer
-                center={mapCenter}
-                zoom={15}
-                style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={true}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                {/* Lingkaran Radius */}
-                <Circle
-                  center={mapCenter}
-                  radius={radiusNum}
-                  pathOptions={{
-                    color: '#6366f1',
-                    fillColor: '#6366f1',
-                    fillOpacity: 0.15,
-                    weight: 2,
-                  }}
-                />
-                {/* Marker Pin */}
-                <Marker position={mapCenter} icon={getMarkerIcon(mapCenter[0], mapCenter[1])} />
-                {/* Klik di peta untuk set koordinat */}
-                <MapClickHandler onClick={handleMapClick} />
-              </MapContainer>
+              <MapComponent 
+                center={mapCenter} 
+                radius={radiusNum} 
+                onMapClick={handleMapClick} 
+              />
             </div>
 
             <button
