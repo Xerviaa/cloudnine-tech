@@ -102,7 +102,7 @@ export default function UbahPasswordPage() {
 
     setTimeout(() => {
       setMessage('')
-      router.push('/profil') // Diubah ke /profil agar kembali ke halaman profil
+      router.push('/profil')
     }, 2000)
 
     setSaving(false)
@@ -130,7 +130,6 @@ export default function UbahPasswordPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Password Lama */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Password Lama
@@ -154,12 +153,10 @@ export default function UbahPasswordPage() {
             </div>
           </div>
 
-          {/* Divider */}
           <div className="border-t border-slate-100 dark:border-slate-700 pt-4">
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">PASSWORD BARU</p>
           </div>
 
-          {/* Password Baru */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Password Baru
@@ -184,7 +181,6 @@ export default function UbahPasswordPage() {
             <PasswordStrength password={passwordBaru} showRequirements={true} />
           </div>
 
-          {/* Konfirmasi Password */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
               Konfirmasi Password Baru
@@ -213,7 +209,6 @@ export default function UbahPasswordPage() {
               </button>
             </div>
 
-            {/* Pesan konfirmasi */}
             {passwordTidakMatch && (
               <p className="text-xs text-rose-600 dark:text-rose-400 mt-1.5 flex items-center gap-1 font-medium">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -234,7 +229,6 @@ export default function UbahPasswordPage() {
             )}
           </div>
 
-          {/* Pesan Error / Sukses */}
           {error && (
             <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-400 text-sm p-3 rounded-xl">
               ⚠️ {error}
@@ -246,7 +240,6 @@ export default function UbahPasswordPage() {
             </div>
           )}
 
-          {/* Tombol */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"

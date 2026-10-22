@@ -24,14 +24,12 @@ export default function ProfilPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [userId, setUserId] = useState('')
 
-  // Form state
   const [nomorHp, setNomorHp] = useState('')
   const [alamatJalan, setAlamatJalan] = useState('')
   const [kabupaten, setKabupaten] = useState('')
   const [kecamatan, setKecamatan] = useState('')
   const [kelurahan, setKelurahan] = useState('')
 
-  // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [showPhotoMenu, setShowPhotoMenu] = useState(false)
@@ -102,7 +100,12 @@ export default function ProfilPage() {
     } else {
       setMessage('✅ Profil berhasil disimpan! Mengarahkan...')
       setTimeout(() => {
-        router.push('/absen')
+        // Redirect berdasarkan role
+        if (profile?.role === 'admin') {
+          router.push('/admin')
+        } else {
+          router.push('/absen')
+        }
         router.refresh()
       }, 1500)
     }
@@ -207,10 +210,8 @@ export default function ProfilPage() {
 
   return (
     <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
-      {/* Header Profil + Foto */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          {/* Avatar Besar */}
           <div className="relative group">
             {avatarUrl ? (
               <button
@@ -243,7 +244,6 @@ export default function ProfilPage() {
             )}
           </div>
 
-          {/* Info + Tombol Foto */}
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100 transition-colors">{profile?.nama_lengkap}</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">{profile?.email}</p>
@@ -255,24 +255,9 @@ export default function ProfilPage() {
               {profile?.role === 'admin' ? '👑 Admin' : '👤 Karyawan'}
             </span>
 
-            {/* Input tersembunyi */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className="hidden"
-            />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleAvatarUpload} className="hidden" />
+            <input ref={galleryInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
 
-            {/* Tombol Foto */}
             <div className="mt-3 flex flex-wrap gap-2 justify-center sm:justify-start">
               <button
                 type="button"
@@ -304,7 +289,6 @@ export default function ProfilPage() {
               )}
             </div>
 
-            {/* Menu Pilihan: Kamera / Galeri */}
             {showPhotoMenu && (
               <div className="mt-3 inline-flex gap-2 p-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl">
                 {isMobile && (
@@ -341,7 +325,6 @@ export default function ProfilPage() {
         </div>
       </div>
 
-      {/* Form Edit */}
       <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
         <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-5 flex items-center gap-2">
           <span>📝</span> Data Profil
@@ -481,7 +464,6 @@ export default function ProfilPage() {
         </div>
       </form>
 
-      {/* Modal Foto Besar */}
       {showPhotoModal && avatarUrl && (
         <div
           className="fixed inset-0 z-[999] bg-black/95 flex items-center justify-center p-4"
