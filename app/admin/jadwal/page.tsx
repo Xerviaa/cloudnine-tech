@@ -57,7 +57,6 @@ export default function AdminJadwalPage() {
       }
       setProfile(profileData)
 
-      // Load semua karyawan (kecuali admin sendiri)
       const { data: empData } = await supabase
         .from('profiles')
         .select('*')
@@ -90,51 +89,37 @@ export default function AdminJadwalPage() {
   }
 
   // ============================================================
-  // Generate kalender bulan
+  // FIX: calendarDays return array of string 'YYYY-MM-DD' atau null
   // ============================================================
   const calendarDays = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const firstDay = new Date(year, month - 1, 1)
-    const lastDay = new Date(year, month, 0)
-    const daysInMonth = lastDay.getDate()
+    const daysInMonth = new Date(year, month, 0).getDate()
     const firstDayOfWeek = firstDay.getDay()
     const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
 
-    const days: (Date | null)[] = []
+    const days: (string | null)[] = []
     for (let i = 0; i < startOffset; i++) days.push(null)
     for (let d = 1; d <= daysInMonth; d++) {
-      days.push(new Date(year, month - 1, d))
+      days.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
     }
     return days
   }, [selectedMonth])
 
-  function isWeekend(date: Date) {
-    const day = date.getDay()
-    return day === 0 || day === 6
-  }
-
-  function getDayStats(date: Date) {
-    const dateStr = date.toISOString().split('T')[0]
+  function getDayStats(dateStr: string) {
     const daySchedules = schedules.filter((s) => s.tanggal === dateStr)
-    
-    // Hitung yang masuk/lembur (hanya yang ada di tabel schedule)
     const masukCount = daySchedules.filter((s) => s.tipe === 'kerja' || s.tipe === 'lembur').length
-
     return { masukCount }
   }
 
-  function openDateModal(date: Date) {
-    const dateStr = date.toISOString().split('T')[0]
+  function openDateModal(dateStr: string) {
     const daySchedules = schedules.filter((s) => s.tanggal === dateStr)
-    
-    // Isi selected employees = yang tipenya 'kerja' atau 'lembur'
     const selected = new Set<string>()
     daySchedules.forEach((s) => {
       if (s.tipe === 'kerja' || s.tipe === 'lembur') {
         selected.add(s.user_id)
       }
     })
-    
     setSelectedDate(dateStr)
     setSelectedEmployees(selected)
   }
@@ -149,28 +134,22 @@ export default function AdminJadwalPage() {
     setSelectedEmployees(newSet)
   }
 
-  // Simpan jadwal untuk tanggal terpilih
   async function saveDateSchedule() {
     if (!selectedDate || !profile) return
     setSaving(true)
 
     try {
-            // Fix Timezone: Parse manual dari string YYYY-MM-DD agar tidak bergeser
+      // Parse manual string 'YYYY-MM-DD'
       const [y, m, d] = selectedDate.split('-').map(Number)
       const dateObj = new Date(y, m - 1, d)
-      const isWeekendDay = isWeekend(dateObj)
-      
-      // Tipe default untuk yang dicentang
-      // Jika Sabtu/Minggu = 'lembur', jika Senin-Jumat = 'kerja'
+      const isWeekendDay = dateObj.getDay() === 0 || dateObj.getDay() === 6
       const defaultTipe = isWeekendDay ? 'lembur' : 'kerja'
 
-      // Hapus semua jadwal untuk tanggal ini
       await supabase
         .from('employee_schedules')
         .delete()
         .eq('tanggal', selectedDate)
 
-      // Siapkan baris baru
       const rows = employees.map((emp) => {
         const isChecked = selectedEmployees.has(emp.id)
         return {
@@ -181,7 +160,6 @@ export default function AdminJadwalPage() {
         }
       })
 
-      // Insert semua
       if (rows.length > 0) {
         const { error } = await supabase.from('employee_schedules').insert(rows)
         if (error) throw error
@@ -197,7 +175,6 @@ export default function AdminJadwalPage() {
     }
   }
 
-  // Reset bulan ini
   async function resetMonth() {
     if (!confirm('Hapus semua jadwal di bulan ini? (Tindakan tidak bisa dibatalkan)')) return
     
@@ -293,7 +270,6 @@ export default function AdminJadwalPage() {
           </p>
         </div>
 
-        {/* Filter & Actions */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
           <div className="flex items-center gap-3 flex-wrap justify-between">
             <div className="flex items-center gap-3 flex-wrap">
@@ -325,7 +301,6 @@ export default function AdminJadwalPage() {
             </div>
           </div>
 
-          {/* Legend */}
           <div className="mt-4 flex items-center gap-4 flex-wrap text-xs">
             <div className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded bg-emerald-300" />
@@ -346,7 +321,6 @@ export default function AdminJadwalPage() {
           </div>
         </div>
 
-        {/* Kalender */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <div className="grid grid-cols-7 gap-2 mb-2">
             {dayNames.map((day, idx) => (
@@ -362,26 +336,29 @@ export default function AdminJadwalPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map((date, idx) => {
-              if (!date) {
+            {calendarDays.map((dateStr, idx) => {
+              if (!dateStr) {
                 return <div key={`empty-${idx}`} className="aspect-square" />
               }
 
-              const dateStr = date.toISOString().split('T')[0]
-              const weekend = isWeekend(date)
-              const stats = getDayStats(date)
+              // Parse manual string 'YYYY-MM-DD' agar tidak geser hari
+              const [y, m, d] = dateStr.split('-').map(Number)
+              const dateObj = new Date(y, m - 1, d)
+              const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
+
+              // Tanggal hari ini dalam format YYYY-MM-DD (lokal)
+              const today = new Date()
+              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+              const stats = getDayStats(dateStr)
               const hasSchedule = schedules.some((s) => s.tanggal === dateStr)
-  const nowWITA = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Makassar' }).split(',')[0]
-const isToday = dateStr === nowWITA
+              const isToday = dateStr === todayStr
 
               let bgColor = 'bg-white hover:bg-slate-50'
               let borderColor = 'border-slate-200'
               let textColor = 'text-slate-800'
 
               if (hasSchedule) {
-                // Jika ada yang lembur (di weekend) -> orange
-                // Atau jika weekend tapi tidak ada yang lembur -> biru (libur semua)
-                // Atau jika weekday -> hijau (kerja)
                 if (weekend && stats.masukCount > 0) {
                   bgColor = 'bg-orange-50 hover:bg-orange-100'
                   borderColor = 'border-orange-300'
@@ -404,12 +381,12 @@ const isToday = dateStr === nowWITA
               return (
                 <button
                   key={dateStr}
-                  onClick={() => openDateModal(date)}
+                  onClick={() => openDateModal(dateStr)}
                   className={`aspect-square rounded-xl border-2 ${borderColor} ${bgColor} ${textColor} p-2 flex flex-col items-start justify-between text-left transition-all hover:scale-[1.02] hover:shadow-md ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className={`text-sm font-bold ${weekend ? 'text-rose-600' : ''}`}>
-                      {date.getDate()}
+                      {d}
                     </span>
                     {isToday && (
                       <span className="text-[9px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">
@@ -460,7 +437,7 @@ const isToday = dateStr === nowWITA
                     Atur Jadwal
                   </h2>
                   <p className="text-white/80 text-xs">
-                    {/* Fix Timezone: Parse manual dari string YYYY-MM-DD */}
+                    {/* FIX: Parse manual string YYYY-MM-DD */}
                     {(() => {
                       const [y, m, d] = selectedDate.split('-').map(Number)
                       const dateObj = new Date(y, m - 1, d)
@@ -493,7 +470,11 @@ const isToday = dateStr === nowWITA
               <div className="space-y-1.5">
                 {employees.map((emp) => {
                   const isChecked = selectedEmployees.has(emp.id)
-                  const isWeekendDay = isWeekend(new Date(selectedDate))
+                  // Parse manual string 'YYYY-MM-DD'
+                  const [y, m, d] = selectedDate.split('-').map(Number)
+                  const dateObj = new Date(y, m - 1, d)
+                  const isWeekendDay = dateObj.getDay() === 0 || dateObj.getDay() === 6
+                  
                   return (
                     <label
                       key={emp.id}
