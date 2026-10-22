@@ -90,7 +90,9 @@ export default function AdminPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [viewingPhoto, setViewingPhoto] = useState<Profile | null>(null)
 
+  // State notifikasi
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
+  const [pendingSwapCount, setPendingSwapCount] = useState(0)
 
   const [searchKaryawan, setSearchKaryawan] = useState('')
   const [filterRole, setFilterRole] = useState<'semua' | 'admin' | 'karyawan'>('semua')
@@ -158,9 +160,6 @@ export default function AdminPage() {
     }
   }, [viewingPhoto, showExportModal])
 
-  // ============================================================
-  // Grouping absensi - Integrasi dengan jadwal libur
-  // ============================================================
   useEffect(() => {
     if (!users.length) {
       setAttendance([])
@@ -199,18 +198,12 @@ export default function AdminPage() {
         }
       }
 
-      // ============================================================
-      // LOGIKA BARU: Cek jadwal libur
-      // 1. Jika ada di database jadwal, cek tipenya
-      // 2. Jika TIDAK ada di database, cek apakah hari ini weekend (Sabtu/Minggu)
-      // ============================================================
       const userSchedule = schedules.find((s) => s.user_id === u.id)
       let isLibur = false
 
       if (userSchedule) {
         isLibur = userSchedule.tipe === 'libur'
       } else {
-        // Fallback: jika tidak ada jadwal (misal admin), cek weekend
         const [y, m, d] = filterDate.split('-').map(Number)
         const dateObj = new Date(y, m - 1, d)
         const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
@@ -259,7 +252,6 @@ export default function AdminPage() {
 
     setAllLogs((allLogsData as any) || [])
 
-    // Ambil data jadwal untuk tanggal ini
     const { data: schedData } = await supabase
       .from('employee_schedules')
       .select('*')
@@ -267,12 +259,21 @@ export default function AdminPage() {
 
     setSchedules((schedData as any) || [])
 
+    // Hitung jumlah pengajuan pending
     const { count: pendingCount } = await supabase
       .from('leave_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending')
 
     setPendingLeaveCount(pendingCount || 0)
+
+    // Hitung jumlah pengajuan tukar libur pending
+    const { count: swapCount } = await supabase
+      .from('shift_swap_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+
+    setPendingSwapCount(swapCount || 0)
   }
 
   const filteredUsers = useMemo(() => {
@@ -513,10 +514,24 @@ export default function AdminPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/admin/jadwal"
-              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+              className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
             >
               <span>📅</span>
               <span className="hidden sm:inline">Kelola Jadwal</span>
+            </Link>
+
+            {/* TOMBOL TUKAR LIBUR DENGAN BADGE NOTIFIKASI */}
+            <Link
+              href="/admin/tukar-libur"
+              className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+            >
+              <span>🔄</span>
+              <span className="hidden sm:inline">Tukar Libur</span>
+              {pendingSwapCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
+                  {pendingSwapCount > 99 ? '99+' : pendingSwapCount}
+                </span>
+              )}
             </Link>
 
             <Link
@@ -557,6 +572,33 @@ export default function AdminPage() {
           <p className="text-slate-500 mt-2">Berikut ringkasan absensi dan data karyawan hari ini</p>
         </div>
 
+        {/* ALERT TUKAR LIBUR */}
+        {pendingSwapCount > 0 && (
+          <Link
+            href="/admin/tukar-libur"
+            className="block mb-6 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-2xl p-5 shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:-translate-y-1 relative overflow-hidden group"
+          >
+            <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition" />
+            <div className="relative flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl shadow-lg shrink-0">
+                🔄
+              </div>
+              <div className="flex-1">
+                <p className="text-white font-bold text-lg leading-tight">
+                  Ada {pendingSwapCount} pengajuan tukar libur menunggu
+                </p>
+                <p className="text-white/80 text-sm mt-0.5">
+                  Klik untuk melihat & memproses pengajuan tukar libur karyawan →
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur rounded-full text-white text-xl group-hover:translate-x-1 transition">
+                →
+              </div>
+            </div>
+          </Link>
+        )}
+
+        {/* ALERT IZIN CUTI */}
         {pendingLeaveCount > 0 && (
           <Link
             href="/admin/izin"
@@ -569,7 +611,7 @@ export default function AdminPage() {
               </div>
               <div className="flex-1">
                 <p className="text-white font-bold text-lg leading-tight">
-                  Ada {pendingLeaveCount} pengajuan menunggu persetujuan
+                  Ada {pendingLeaveCount} pengajuan izin/cuti menunggu persetujuan
                 </p>
                 <p className="text-white/80 text-sm mt-0.5">
                   Klik untuk melihat & memproses pengajuan izin/cuti karyawan →
