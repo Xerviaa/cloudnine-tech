@@ -226,214 +226,178 @@ export default function AdminJadwalPage() {
 
   if (loading || !profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat data...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 transition-colors">
+          📅 Kelola Jadwal Karyawan
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">
+          Atur siapa yang masuk & siapa yang libur setiap harinya
+        </p>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-5 mb-6 transition-colors">
+        <div className="flex items-center gap-3 flex-wrap justify-between">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              📅
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Kelola Jadwal</p>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Pilih Bulan</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="mt-0.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium cursor-pointer"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
-          </Link>
+          </div>
 
-          <div className="flex items-center gap-2">
-            {/* TOMBOL TUKAR LIBUR - PINDAH KE SINI */}
+          <div className="flex items-center gap-2 flex-wrap">
             <Link
               href="/admin/tukar-libur"
-              className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+              className="relative px-4 py-2.5 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 font-semibold text-sm rounded-xl transition-all inline-flex items-center gap-2"
             >
-              <span>🔄</span>
-              <span className="hidden sm:inline">Tukar Libur</span>
+              <span>🔄</span> Tukar Libur
               {pendingSwapCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
                   {pendingSwapCount > 99 ? '99+' : pendingSwapCount}
                 </span>
               )}
             </Link>
-
-            <Link
-              href="/admin"
-              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
+            <button
+              onClick={resetMonth}
+              disabled={saving}
+              className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-rose-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2"
             >
-              ← Kembali
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            📅 Kelola Jadwal Karyawan
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Atur siapa yang masuk & siapa yang libur setiap harinya
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 mb-6">
-          <div className="flex items-center gap-3 flex-wrap justify-between">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                📅
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 block">Pilih Bulan</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium cursor-pointer"
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={resetMonth}
-                disabled={saving}
-                className="px-4 py-2.5 bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-rose-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 inline-flex items-center gap-2"
-              >
-                🗑️ Reset Bulan Ini
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-4 flex-wrap text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-300" />
-              <span className="text-slate-600">Hari Kerja</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-blue-300" />
-              <span className="text-slate-600">Hari Libur</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-orange-400" />
-              <span className="text-slate-600">Lembur (Sabtu/Minggu Masuk)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-slate-200" />
-              <span className="text-slate-600">Belum Diset</span>
-            </div>
+              🗑️ Reset Bulan Ini
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {dayNames.map((day, idx) => (
-              <div
-                key={day}
-                className={`text-center text-xs font-bold uppercase tracking-wider py-2 ${
-                  idx >= 5 ? 'text-rose-500' : 'text-slate-500'
-                }`}
-              >
-                {day}
-              </div>
-            ))}
+        <div className="mt-4 flex items-center gap-4 flex-wrap text-xs">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-emerald-300 dark:bg-emerald-600" />
+            <span className="text-slate-600 dark:text-slate-300">Hari Kerja</span>
           </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-blue-300 dark:bg-blue-600" />
+            <span className="text-slate-600 dark:text-slate-300">Hari Libur</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-orange-400 dark:bg-orange-600" />
+            <span className="text-slate-600 dark:text-slate-300">Lembur (Sabtu/Minggu Masuk)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-slate-200 dark:bg-slate-600" />
+            <span className="text-slate-600 dark:text-slate-300">Belum Diset</span>
+          </div>
+        </div>
+      </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map((dateStr, idx) => {
-              if (!dateStr) {
-                return <div key={`empty-${idx}`} className="aspect-square" />
-              }
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {dayNames.map((day, idx) => (
+            <div
+              key={day}
+              className={`text-center text-xs font-bold uppercase tracking-wider py-2 ${
+                idx >= 5 ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              {day}
+            </div>
+          ))}
+        </div>
 
-              const [y, m, d] = dateStr.split('-').map(Number)
-              const dateObj = new Date(y, m - 1, d)
-              const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
+        <div className="grid grid-cols-7 gap-2">
+          {calendarDays.map((dateStr, idx) => {
+            if (!dateStr) {
+              return <div key={`empty-${idx}`} className="aspect-square" />
+            }
 
-              const today = new Date()
-              const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            const [y, m, d] = dateStr.split('-').map(Number)
+            const dateObj = new Date(y, m - 1, d)
+            const weekend = dateObj.getDay() === 0 || dateObj.getDay() === 6
 
-              const stats = getDayStats(dateStr)
-              const hasSchedule = schedules.some((s) => s.tanggal === dateStr)
-              const isToday = dateStr === todayStr
+            const today = new Date()
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
-              let bgColor = 'bg-white hover:bg-slate-50'
-              let borderColor = 'border-slate-200'
-              let textColor = 'text-slate-800'
+            const stats = getDayStats(dateStr)
+            const hasSchedule = schedules.some((s) => s.tanggal === dateStr)
+            const isToday = dateStr === todayStr
 
-              if (hasSchedule) {
-                if (weekend && stats.masukCount > 0) {
-                  bgColor = 'bg-orange-50 hover:bg-orange-100'
-                  borderColor = 'border-orange-300'
-                  textColor = 'text-orange-900'
-                } else if (weekend) {
-                  bgColor = 'bg-blue-50 hover:bg-blue-100'
-                  borderColor = 'border-blue-300'
-                  textColor = 'text-blue-900'
-                } else {
-                  bgColor = 'bg-emerald-50 hover:bg-emerald-100'
-                  borderColor = 'border-emerald-300'
-                  textColor = 'text-emerald-900'
-                }
+            let bgColor = 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700'
+            let borderColor = 'border-slate-200 dark:border-slate-700'
+            let textColor = 'text-slate-800 dark:text-slate-100'
+
+            if (hasSchedule) {
+              if (weekend && stats.masukCount > 0) {
+                bgColor = 'bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40'
+                borderColor = 'border-orange-300 dark:border-orange-800'
+                textColor = 'text-orange-900 dark:text-orange-300'
               } else if (weekend) {
-                bgColor = 'bg-slate-50 hover:bg-slate-100'
-                borderColor = 'border-slate-200'
-                textColor = 'text-slate-400'
+                bgColor = 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                borderColor = 'border-blue-300 dark:border-blue-800'
+                textColor = 'text-blue-900 dark:text-blue-300'
+              } else {
+                bgColor = 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40'
+                borderColor = 'border-emerald-300 dark:border-emerald-800'
+                textColor = 'text-emerald-900 dark:text-emerald-300'
               }
+            } else if (weekend) {
+              bgColor = 'bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900'
+              borderColor = 'border-slate-200 dark:border-slate-700'
+              textColor = 'text-slate-400 dark:text-slate-500'
+            }
 
-              return (
-                <button
-                  key={dateStr}
-                  onClick={() => openDateModal(dateStr)}
-                  className={`aspect-square rounded-xl border-2 ${borderColor} ${bgColor} ${textColor} p-2 flex flex-col items-start justify-between text-left transition-all hover:scale-[1.02] hover:shadow-md ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className={`text-sm font-bold ${weekend ? 'text-rose-600' : ''}`}>
-                      {d}
+            return (
+              <button
+                key={dateStr}
+                onClick={() => openDateModal(dateStr)}
+                className={`aspect-square rounded-xl border-2 ${borderColor} ${bgColor} ${textColor} p-2 flex flex-col items-start justify-between text-left transition-all hover:scale-[1.02] hover:shadow-md ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-800' : ''}`}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className={`text-sm font-bold ${weekend ? 'text-rose-600 dark:text-rose-400' : ''}`}>
+                    {d}
+                  </span>
+                  {isToday && (
+                    <span className="text-[9px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                      HARI INI
                     </span>
-                    {isToday && (
-                      <span className="text-[9px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">
-                        HARI INI
-                      </span>
+                  )}
+                </div>
+
+                {hasSchedule && (
+                  <div className="w-full space-y-0.5">
+                    {stats.masukCount > 0 && (
+                      <div className={`text-[9px] font-semibold ${weekend ? 'text-orange-700 dark:text-orange-300' : 'text-emerald-700 dark:text-emerald-300'} truncate`}>
+                        👥 {stats.masukCount} masuk
+                      </div>
                     )}
                   </div>
+                )}
 
-                  {hasSchedule && (
-                    <div className="w-full space-y-0.5">
-                      {stats.masukCount > 0 && (
-                        <div className={`text-[9px] font-semibold ${weekend ? 'text-orange-700' : 'text-emerald-700'} truncate`}>
-                          👥 {stats.masukCount} masuk
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!hasSchedule && (
-                    <div className="text-[9px] text-slate-400">
-                      Belum diset
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                {!hasSchedule && (
+                  <div className="text-[9px] text-slate-400 dark:text-slate-500">
+                    Belum diset
+                  </div>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -444,7 +408,7 @@ export default function AdminJadwalPage() {
           onClick={() => !saving && setSelectedDate(null)}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="bg-gradient-to-r from-indigo-500 to-violet-600 p-5">
@@ -478,10 +442,10 @@ export default function AdminJadwalPage() {
 
             <div className="p-5 overflow-y-auto flex-1">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-slate-700">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Centang karyawan yang <strong>MASUK</strong>:
                 </p>
-                <span className="text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-semibold">
+                <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-full font-semibold">
                   {selectedEmployees.size} / {employees.length} dipilih
                 </span>
               </div>
@@ -498,8 +462,8 @@ export default function AdminJadwalPage() {
                       key={emp.id}
                       className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition ${
                         isChecked
-                          ? 'border-indigo-400 bg-indigo-50'
-                          : 'border-slate-200 bg-white hover:border-slate-300'
+                          ? 'border-indigo-400 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                     >
                       <input
@@ -513,7 +477,7 @@ export default function AdminJadwalPage() {
                         <img
                           src={emp.avatar_url}
                           alt={emp.nama_lengkap}
-                          className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
+                          className="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-sm"
                         />
                       ) : (
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm ${
@@ -525,21 +489,21 @@ export default function AdminJadwalPage() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
                           {emp.nama_lengkap}
                           {emp.role === 'admin' && (
-                            <span className="ml-1.5 text-[9px] bg-violet-100 text-violet-700 border border-violet-200 px-1.5 py-0.5 rounded-full font-bold">
+                            <span className="ml-1.5 text-[9px] bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800 px-1.5 py-0.5 rounded-full font-bold">
                               Admin
                             </span>
                           )}
                         </p>
-                        <p className="text-[10px] text-slate-500 truncate">{emp.email}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{emp.email}</p>
                       </div>
                       {isChecked && (
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                           isWeekendDay
-                            ? 'bg-orange-100 text-orange-700 border border-orange-300'
-                            : 'bg-emerald-100 text-emerald-700 border border-emerald-300'
+                            ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-800'
+                            : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
                         }`}>
                           {isWeekendDay ? 'LEMBUR' : 'KERJA'}
                         </span>
@@ -550,7 +514,7 @@ export default function AdminJadwalPage() {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-between items-center">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-2 justify-between items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -561,7 +525,7 @@ export default function AdminJadwalPage() {
                   }
                 }}
                 disabled={saving}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-800 underline disabled:opacity-50"
+                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 underline disabled:opacity-50"
               >
                 {selectedEmployees.size === employees.length ? 'Uncheck Semua' : 'Check Semua'}
               </button>
@@ -571,7 +535,7 @@ export default function AdminJadwalPage() {
                   type="button"
                   onClick={() => setSelectedDate(null)}
                   disabled={saving}
-                  className="px-4 py-2 text-sm text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition disabled:opacity-50"
+                  className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg transition disabled:opacity-50"
                 >
                   Batal
                 </button>
@@ -595,6 +559,6 @@ export default function AdminJadwalPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }

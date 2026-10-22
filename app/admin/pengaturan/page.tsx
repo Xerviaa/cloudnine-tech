@@ -2,14 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import dynamic from 'next/dynamic'
 
-// IMPORT KOMPONEN PETA YANG BARU KITA BUAT
 const MapComponent = dynamic(() => import('./MapComponent'), { 
   ssr: false,
-  loading: () => <div className="h-full w-full bg-slate-100 animate-pulse rounded-xl flex items-center justify-center text-slate-400">Memuat Peta...</div>
+  loading: () => <div className="h-full w-full bg-slate-100 dark:bg-slate-800 animate-pulse rounded-xl flex items-center justify-center text-slate-400">Memuat Peta...</div>
 })
 
 type CompanySettings = {
@@ -32,7 +30,6 @@ export default function AdminPengaturanPage() {
   const [settings, setSettings] = useState<CompanySettings | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  // Form State
   const [namaPerusahaan, setNamaPerusahaan] = useState('')
   const [jamMasuk, setJamMasuk] = useState('08:00')
   const [jamPulang, setJamPulang] = useState('16:30')
@@ -42,7 +39,6 @@ export default function AdminPengaturanPage() {
   const [longitude, setLongitude] = useState('')
   const [radius, setRadius] = useState('100')
 
-  // State Berlaku Mulai
   const [berlakuMulai, setBerlakuMulai] = useState(() => {
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
@@ -213,12 +209,12 @@ export default function AdminPengaturanPage() {
 
   if (loading || !mounted) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat pengaturan...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat pengaturan...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -229,248 +225,213 @@ export default function AdminPengaturanPage() {
   const radiusNum = Number(radius) || 100
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 transition-colors">⚙️ Pengaturan Perusahaan</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">
+          Atur identitas perusahaan, jam kantor, dan lokasi untuk validasi GPS
+        </p>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">⚙️</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Pengaturan Perusahaan</p>
-            </div>
-          </Link>
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Kartu Identitas */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <span>🏢</span> Identitas Perusahaan
+          </h2>
 
-          <Link
-            href="/admin"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
-          >
-            ← Kembali
-          </Link>
-        </div>
-      </header>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nama Perusahaan</label>
+            <input
+              type="text"
+              value={namaPerusahaan}
+              onChange={(e) => setNamaPerusahaan(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">⚙️ Pengaturan Perusahaan</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Atur identitas perusahaan, jam kantor, dan lokasi untuk validasi GPS
-          </p>
-        </div>
-
-        <form onSubmit={handleSave} className="space-y-6">
-          {/* Kartu Identitas */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span>🏢</span> Identitas Perusahaan
-            </h2>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nama Perusahaan</label>
-              <input
-                type="text"
-                value={namaPerusahaan}
-                onChange={(e) => setNamaPerusahaan(e.target.value)}
-                required
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Logo Perusahaan</label>
-              <div className="flex items-center gap-4">
-                {settings?.logo_url ? (
-                  <img
-                    src={settings.logo_url}
-                    alt="Logo"
-                    className="w-24 h-24 rounded-xl object-contain bg-slate-100 border border-slate-200"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400">
-                    <span className="text-3xl">🏢</span>
-                  </div>
-                )}
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition disabled:opacity-50"
-                  >
-                    {uploading ? 'Mengunggah...' : '📷 Ganti Logo'}
-                  </button>
-                  <p className="text-[10px] text-slate-400 mt-1">Format: PNG, JPG. Maks 2MB</p>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Logo Perusahaan</label>
+            <div className="flex items-center gap-4">
+              {settings?.logo_url ? (
+                <img
+                  src={settings.logo_url}
+                  alt="Logo"
+                  className="w-24 h-24 rounded-xl object-contain bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-xl bg-slate-100 dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-400">
+                  <span className="text-3xl">🏢</span>
                 </div>
+              )}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="px-4 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-lg transition disabled:opacity-50"
+                >
+                  {uploading ? 'Mengunggah...' : '📷 Ganti Logo'}
+                </button>
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Format: PNG, JPG. Maks 2MB</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Kartu Jam Kantor */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span>⏰</span> Jam Operasional
-            </h2>
+        {/* Kartu Jam Kantor */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <span>⏰</span> Jam Operasional
+          </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Jam Masuk</label>
-                <input
-                  type="time"
-                  value={jamMasuk}
-                  onChange={(e) => setJamMasuk(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Jam Pulang</label>
-                <input
-                  type="time"
-                  value={jamPulang}
-                  onChange={(e) => setJamPulang(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Istirahat Mulai</label>
-                <input
-                  type="time"
-                  value={jamIstirahatMulai}
-                  onChange={(e) => setJamIstirahatMulai(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Istirahat Selesai</label>
-                <input
-                  type="time"
-                  value={jamIstirahatSelesai}
-                  onChange={(e) => setJamIstirahatSelesai(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            {/* INPUT BARU: Berlaku Mulai */}
-            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <label className="block text-sm font-bold text-amber-800 mb-1">
-                ⚠️ Jam Kantor Baru Berlaku Mulai Tanggal:
-              </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jam Masuk</label>
               <input
-                type="date"
-                value={berlakuMulai}
-                onChange={(e) => setBerlakuMulai(e.target.value)}
+                type="time"
+                value={jamMasuk}
+                onChange={(e) => setJamMasuk(e.target.value)}
                 required
-                className="w-full px-3 py-2 border border-amber-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <p className="text-[10px] text-amber-700 mt-1">
-                Perubahan jam kantor TIDAK akan mengubah data absensi sebelum tanggal ini. Direkomendasikan memilih <strong>besok</strong> atau tanggal mendatang.
-              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jam Pulang</label>
+              <input
+                type="time"
+                value={jamPulang}
+                onChange={(e) => setJamPulang(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Istirahat Mulai</label>
+              <input
+                type="time"
+                value={jamIstirahatMulai}
+                onChange={(e) => setJamIstirahatMulai(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Istirahat Selesai</label>
+              <input
+                type="time"
+                value={jamIstirahatSelesai}
+                onChange={(e) => setJamIstirahatSelesai(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
             </div>
           </div>
 
-          {/* Kartu Lokasi Kantor (Geofencing) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <span>📍</span> Lokasi Kantor (Validasi GPS)
-            </h2>
-            <p className="text-xs text-slate-500 mb-4">
-              Klik pada peta untuk memilih lokasi kantor. Pin bisa digeser. Lingkaran abu-abu adalah radius validasi.
+          <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+            <label className="block text-sm font-bold text-amber-800 dark:text-amber-400 mb-1">
+              ⚠️ Jam Kantor Baru Berlaku Mulai Tanggal:
+            </label>
+            <input
+              type="date"
+              value={berlakuMulai}
+              onChange={(e) => setBerlakuMulai(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
+            <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
+              Perubahan jam kantor TIDAK akan mengubah data absensi sebelum tanggal ini. Direkomendasikan memilih <strong>besok</strong> atau tanggal mendatang.
             </p>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Latitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  placeholder="-8.650000"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Longitude</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  placeholder="115.216667"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
+        {/* Kartu Lokasi Kantor */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+            <span>📍</span> Lokasi Kantor (Validasi GPS)
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+            Klik pada peta untuk memilih lokasi kantor. Pin bisa digeser. Lingkaran abu-abu adalah radius validasi.
+          </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Radius Maksimal (meter)</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Latitude</label>
               <input
                 type="number"
-                value={radius}
-                onChange={(e) => setRadius(e.target.value)}
-                placeholder="100"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Karyawan tidak bisa absen jika di luar radius ini.</p>
-            </div>
-
-            {/* ============================================================ */}
-            {/* PETA LEAFLET (SUDAH DIGANTI DENGAN KOMPONEN BARU)            */}
-            {/* ============================================================ */}
-            <div className="mb-4 rounded-xl overflow-hidden border border-slate-300 shadow-inner" style={{ height: '400px' }}>
-              <MapComponent 
-                center={mapCenter} 
-                radius={radiusNum} 
-                onMapClick={handleMapClick} 
+                step="any"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="-8.650000"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
-
-            <button
-              type="button"
-              onClick={handleGetCurrentLocation}
-              className="w-full py-2 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition inline-flex items-center justify-center gap-2"
-            >
-              📡 Ambil Lokasi dari GPS Saat Ini
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="115.216667"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
           </div>
 
-          {/* Tombol Simpan */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Radius Maksimal (meter)</label>
+            <input
+              type="number"
+              value={radius}
+              onChange={(e) => setRadius(e.target.value)}
+              placeholder="100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Karyawan tidak bisa absen jika di luar radius ini.</p>
+          </div>
+
+          <div className="mb-4 rounded-xl overflow-hidden border border-slate-300 dark:border-slate-600 shadow-inner" style={{ height: '400px' }}>
+            <MapComponent 
+              center={mapCenter} 
+              radius={radiusNum} 
+              onMapClick={handleMapClick} 
+            />
+          </div>
+
           <button
-            type="submit"
-            disabled={saving}
-            className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            type="button"
+            onClick={handleGetCurrentLocation}
+            className="w-full py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition inline-flex items-center justify-center gap-2"
           >
-            {saving ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              <>💾 Simpan Pengaturan</>
-            )}
+            📡 Ambil Lokasi dari GPS Saat Ini
           </button>
-        </form>
-      </div>
-    </main>
+        </div>
+
+        {/* Tombol Simpan */}
+        <button
+          type="submit"
+          disabled={saving}
+          className="w-full py-3 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition disabled:opacity-50 inline-flex items-center justify-center gap-2"
+        >
+          {saving ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Menyimpan...
+            </>
+          ) : (
+            <>💾 Simpan Pengaturan</>
+          )}
+        </button>
+      </form>
+    </div>
   )
 }

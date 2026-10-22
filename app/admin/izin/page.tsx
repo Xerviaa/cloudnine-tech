@@ -45,7 +45,6 @@ export default function AdminIzinPage() {
   const [action, setAction] = useState<'disetujui' | 'ditolak' | null>(null)
   const [catatan, setCatatan] = useState('')
 
-  // Preview foto surat dokter (modal fullscreen)
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
 
   const router = useRouter()
@@ -202,15 +201,15 @@ export default function AdminIzinPage() {
   }
 
   const tipeConfig = {
-    izin: { label: 'Izin', emoji: '📋', badge: 'bg-sky-100 text-sky-700 border-sky-200' },
-    sakit: { label: 'Sakit', emoji: '🏥', badge: 'bg-rose-100 text-rose-700 border-rose-200' },
-    cuti: { label: 'Cuti', emoji: '🌴', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    izin: { label: 'Izin', emoji: '📋', badge: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800' },
+    sakit: { label: 'Sakit', emoji: '🏥', badge: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800' },
+    cuti: { label: 'Cuti', emoji: '🌴', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' },
   }
 
   const statusConfig = {
-    pending: { label: 'Menunggu', emoji: '⏳', badge: 'bg-amber-100 text-amber-700 border-amber-300' },
-    disetujui: { label: 'Disetujui', emoji: '✅', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-    ditolak: { label: 'Ditolak', emoji: '❌', badge: 'bg-rose-100 text-rose-700 border-rose-300' },
+    pending: { label: 'Menunggu', emoji: '⏳', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' },
+    disetujui: { label: 'Disetujui', emoji: '✅', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' },
+    ditolak: { label: 'Ditolak', emoji: '❌', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800' },
   }
 
   const filteredRequests = useMemo(() => {
@@ -235,291 +234,255 @@ export default function AdminIzinPage() {
 
   if (loading || !profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat data...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 transition-colors">
+          📋 Kelola Izin & Cuti
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">
+          Setujui atau tolak pengajuan izin, sakit, dan cuti karyawan
+        </p>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/admin" className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
-            </div>
-            <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Kelola Izin & Cuti</p>
-            </div>
-          </Link>
+      {loadError && (
+        <div className="mb-6 bg-rose-50 dark:bg-rose-900/20 border-2 border-rose-300 dark:border-rose-800 rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-2xl">⚠️</span>
+          <div className="flex-1">
+            <p className="text-rose-800 dark:text-rose-400 font-bold text-sm">Gagal Memuat Data</p>
+            <p className="text-rose-700 dark:text-rose-300 text-xs mt-1">{loadError}</p>
+            <button
+              onClick={() => loadRequests()}
+              className="mt-2 text-xs font-semibold text-rose-700 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-300 underline"
+            >
+              🔄 Coba Lagi
+            </button>
+          </div>
+        </div>
+      )}
 
-          <Link
-            href="/admin"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 transition-colors">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Pengajuan</p>
+          <p className="text-3xl font-bold text-slate-800 dark:text-slate-100 mt-1">{stats.total}</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-4 shadow-lg shadow-amber-500/25">
+          <p className="text-xs text-white/90 font-medium">Menunggu</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.pending}</p>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/25">
+          <p className="text-xs text-white/90 font-medium">Disetujui</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.disetujui}</p>
+        </div>
+        <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 shadow-lg shadow-rose-500/25">
+          <p className="text-xs text-white/90 font-medium">Ditolak</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.ditolak}</p>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6 transition-colors">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Cari nama atau email karyawan..."
+              value={searchUser}
+              onChange={(e) => setSearchUser(e.target.value)}
+              className="pl-9 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full"
+            />
+          </div>
+
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as any)}
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
           >
-            ← Kembali
-          </Link>
+            <option value="semua">Semua Status</option>
+            <option value="pending">⏳ Menunggu</option>
+            <option value="disetujui">✅ Disetujui</option>
+            <option value="ditolak">❌ Ditolak</option>
+          </select>
+
+          <select
+            value={filterTipe}
+            onChange={(e) => setFilterTipe(e.target.value as any)}
+            className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+          >
+            <option value="semua">Semua Tipe</option>
+            <option value="izin">📋 Izin</option>
+            <option value="sakit">🏥 Sakit</option>
+            <option value="cuti">🌴 Cuti</option>
+          </select>
         </div>
-      </header>
+      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            📋 Kelola Izin & Cuti
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Setujui atau tolak pengajuan izin, sakit, dan cuti karyawan
-          </p>
-        </div>
-
-        {/* Error Alert */}
-        {loadError && (
-          <div className="mb-6 bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div className="flex-1">
-              <p className="text-rose-800 font-bold text-sm">Gagal Memuat Data</p>
-              <p className="text-rose-700 text-xs mt-1">{loadError}</p>
-              <button
-                onClick={() => loadRequests()}
-                className="mt-2 text-xs font-semibold text-rose-700 hover:text-rose-900 underline"
-              >
-                🔄 Coba Lagi
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
-            <p className="text-xs text-slate-500 font-medium">Total Pengajuan</p>
-            <p className="text-3xl font-bold text-slate-800 mt-1">{stats.total}</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-4 shadow-lg shadow-amber-500/25">
-            <p className="text-xs text-white/90 font-medium">Menunggu</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.pending}</p>
-          </div>
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/25">
-            <p className="text-xs text-white/90 font-medium">Disetujui</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.disetujui}</p>
-          </div>
-          <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-2xl p-4 shadow-lg shadow-rose-500/25">
-            <p className="text-xs text-white/90 font-medium">Ditolak</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.ditolak}</p>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 dark:from-slate-800 dark:to-slate-800 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">Daftar Pengajuan</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Menampilkan {filteredRequests.length} dari {requests.length} pengajuan
+            </p>
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Cari nama atau email karyawan..."
-                value={searchUser}
-                onChange={(e) => setSearchUser(e.target.value)}
-                className="pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent w-full"
-              />
-            </div>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
-            >
-              <option value="semua">Semua Status</option>
-              <option value="pending">⏳ Menunggu</option>
-              <option value="disetujui">✅ Disetujui</option>
-              <option value="ditolak">❌ Ditolak</option>
-            </select>
-
-            <select
-              value={filterTipe}
-              onChange={(e) => setFilterTipe(e.target.value as any)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
-            >
-              <option value="semua">Semua Tipe</option>
-              <option value="izin">📋 Izin</option>
-              <option value="sakit">🏥 Sakit</option>
-              <option value="cuti">🌴 Cuti</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Daftar Pengajuan */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-base font-bold text-slate-800">Daftar Pengajuan</h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Menampilkan {filteredRequests.length} dari {requests.length} pengajuan
+        {filteredRequests.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-6xl mb-3 opacity-40">📭</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">
+              {requests.length === 0 ? 'Belum ada pengajuan' : 'Tidak ada data yang cocok dengan filter'}
+            </p>
+            {requests.length === 0 && (
+              <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">
+                Coba buat pengajuan baru di halaman <a href="/izin" className="text-indigo-600 dark:text-indigo-400 underline">/izin</a>
               </p>
-            </div>
+            )}
           </div>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            {filteredRequests.map((r) => {
+              const tipeCfg = tipeConfig[r.tipe]
+              const statusCfg = statusConfig[r.status]
+              const user = r.profiles
+              return (
+                <div key={r.id} className="p-5 hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition">
+                  <div className="flex items-start gap-4">
+                    {user?.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.nama_lengkap}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-white dark:ring-slate-700 shadow-md shrink-0"
+                      />
+                    ) : (
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0 ${
+                        user?.role === 'admin'
+                          ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
+                          : 'bg-gradient-to-br from-sky-500 to-cyan-500'
+                      }`}>
+                        {user?.nama_lengkap ? getInitials(user.nama_lengkap) : '?'}
+                      </div>
+                    )}
 
-          {filteredRequests.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-6xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 text-sm font-medium">
-                {requests.length === 0 ? 'Belum ada pengajuan' : 'Tidak ada data yang cocok dengan filter'}
-              </p>
-              {requests.length === 0 && (
-                <p className="text-slate-400 text-xs mt-1">
-                  Coba buat pengajuan baru di halaman <a href="/izin" className="text-indigo-600 underline">/izin</a>
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {filteredRequests.map((r) => {
-                const tipeCfg = tipeConfig[r.tipe]
-                const statusCfg = statusConfig[r.status]
-                const user = r.profiles
-                return (
-                  <div key={r.id} className="p-5 hover:bg-slate-50/50 transition">
-                    <div className="flex items-start gap-4">
-                      {user?.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={user.nama_lengkap}
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow-md shrink-0"
-                        />
-                      ) : (
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md shrink-0 ${
-                          user?.role === 'admin'
-                            ? 'bg-gradient-to-br from-violet-500 to-fuchsia-600'
-                            : 'bg-gradient-to-br from-sky-500 to-cyan-500'
-                        }`}>
-                          {user?.nama_lengkap ? getInitials(user.nama_lengkap) : '?'}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          {user?.nama_lengkap || 'Unknown User'}
+                        </span>
+                        <span className="text-xs text-slate-400 dark:text-slate-500">•</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{user?.email || '-'}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${tipeCfg.badge}`}>
+                          {tipeCfg.emoji} {tipeCfg.label}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusCfg.badge}`}>
+                          {statusCfg.emoji} {statusCfg.label}
+                        </span>
+                        {r.attachment_url && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800">
+                            📎 Ada Lampiran
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-slate-800 dark:text-slate-100 font-semibold">
+                        {formatDate(r.tanggal_mulai)} — {formatDate(r.tanggal_selesai)}
+                        <span className="ml-2 text-xs text-slate-500 dark:text-slate-400 font-normal">
+                          ({hitungHari(r.tanggal_mulai, r.tanggal_selesai)} hari)
+                        </span>
+                      </p>
+
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mt-2 whitespace-pre-wrap">{r.alasan}</p>
+
+                      {r.attachment_url && (
+                        <div className="mt-3">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1">
+                            📎 Surat Dokter:
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setViewingPhoto(r.attachment_url)}
+                            className="relative group inline-block"
+                          >
+                            <img
+                              src={r.attachment_url}
+                              alt="Surat dokter"
+                              className="w-28 h-28 object-cover rounded-xl border-2 border-slate-200 dark:border-slate-600 shadow-md transition group-hover:scale-105 group-hover:border-indigo-400"
+                            />
+                            <div className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                <line x1="11" y1="8" x2="11" y2="14"/>
+                                <line x1="8" y1="11" x2="14" y2="11"/>
+                              </svg>
+                            </div>
+                          </button>
                         </div>
                       )}
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <span className="text-sm font-bold text-slate-800">
-                            {user?.nama_lengkap || 'Unknown User'}
-                          </span>
-                          <span className="text-xs text-slate-400">•</span>
-                          <span className="text-xs text-slate-500">{user?.email || '-'}</span>
+                      {r.catatan_admin && (
+                        <div className={`mt-3 border-l-2 pl-3 py-2 rounded-r ${
+                          r.status === 'disetujui'
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-400 dark:border-emerald-700'
+                            : 'bg-rose-50 dark:bg-rose-900/20 border-rose-400 dark:border-rose-700'
+                        }`}>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-0.5">
+                            Catatan Admin {r.approved_at && `(${formatDateTime(r.approved_at)})`}:
+                          </p>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 italic">"{r.catatan_admin}"</p>
                         </div>
+                      )}
 
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${tipeCfg.badge}`}>
-                            {tipeCfg.emoji} {tipeCfg.label}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${statusCfg.badge}`}>
-                            {statusCfg.emoji} {statusCfg.label}
-                          </span>
-                          {r.attachment_url && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-violet-100 text-violet-700 border border-violet-200">
-                              📎 Ada Lampiran
-                            </span>
-                          )}
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">
+                        Diajukan: {formatDateTime(r.created_at)}
+                      </p>
+
+                      {r.status === 'pending' && (
+                        <div className="mt-3 flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(r)
+                              setAction('disetujui')
+                              setCatatan('')
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg shadow-md shadow-emerald-500/30 transition"
+                          >
+                            ✅ Setujui
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(r)
+                              setAction('ditolak')
+                              setCatatan('')
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 rounded-lg shadow-md shadow-rose-500/30 transition"
+                          >
+                            ❌ Tolak
+                          </button>
                         </div>
-
-                        <p className="text-sm text-slate-800 font-semibold">
-                          {formatDate(r.tanggal_mulai)} — {formatDate(r.tanggal_selesai)}
-                          <span className="ml-2 text-xs text-slate-500 font-normal">
-                            ({hitungHari(r.tanggal_mulai, r.tanggal_selesai)} hari)
-                          </span>
-                        </p>
-
-                        <p className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">{r.alasan}</p>
-
-                        {/* Foto Surat Dokter - Thumbnail di Card */}
-                        {r.attachment_url && (
-                          <div className="mt-3">
-                            <p className="text-[10px] text-slate-500 font-medium mb-1">
-                              📎 Surat Dokter:
-                            </p>
-                            <button
-                              type="button"
-                              onClick={() => setViewingPhoto(r.attachment_url)}
-                              className="relative group inline-block"
-                            >
-                              <img
-                                src={r.attachment_url}
-                                alt="Surat dokter"
-                                className="w-28 h-28 object-cover rounded-xl border-2 border-slate-200 shadow-md transition group-hover:scale-105 group-hover:border-indigo-400"
-                              />
-                              <div className="absolute inset-0 rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="11" cy="11" r="8"/>
-                                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                                  <line x1="11" y1="8" x2="11" y2="14"/>
-                                  <line x1="8" y1="11" x2="14" y2="11"/>
-                                </svg>
-                              </div>
-                            </button>
-                          </div>
-                        )}
-
-                        {r.catatan_admin && (
-                          <div className={`mt-3 border-l-2 pl-3 py-2 rounded-r ${
-                            r.status === 'disetujui'
-                              ? 'bg-emerald-50 border-emerald-400'
-                              : 'bg-rose-50 border-rose-400'
-                          }`}>
-                            <p className="text-[10px] text-slate-500 font-medium mb-0.5">
-                              Catatan Admin {r.approved_at && `(${formatDateTime(r.approved_at)})`}:
-                            </p>
-                            <p className="text-xs text-slate-700 italic">"{r.catatan_admin}"</p>
-                          </div>
-                        )}
-
-                        <p className="text-[10px] text-slate-400 mt-2">
-                          Diajukan: {formatDateTime(r.created_at)}
-                        </p>
-
-                        {r.status === 'pending' && (
-                          <div className="mt-3 flex gap-2 flex-wrap">
-                            <button
-                              onClick={() => {
-                                setSelectedRequest(r)
-                                setAction('disetujui')
-                                setCatatan('')
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg shadow-md shadow-emerald-500/30 transition"
-                            >
-                              ✅ Setujui
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedRequest(r)
-                                setAction('ditolak')
-                                setCatatan('')
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 rounded-lg shadow-md shadow-rose-500/30 transition"
-                            >
-                              ❌ Tolak
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modal Approve/Reject */}
@@ -529,7 +492,7 @@ export default function AdminIzinPage() {
           onClick={() => !processing && (setSelectedRequest(null), setAction(null), setCatatan(''))}
         >
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             <div className={`p-5 ${
@@ -553,30 +516,29 @@ export default function AdminIzinPage() {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-500 w-20">Tipe:</span>
+                  <span className="text-slate-500 dark:text-slate-400 w-20">Tipe:</span>
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-bold border ${tipeConfig[selectedRequest.tipe].badge}`}>
                     {tipeConfig[selectedRequest.tipe].emoji} {tipeConfig[selectedRequest.tipe].label}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-500 w-20">Tanggal:</span>
-                  <span className="text-slate-800 font-medium">
+                  <span className="text-slate-500 dark:text-slate-400 w-20">Tanggal:</span>
+                  <span className="text-slate-800 dark:text-slate-100 font-medium">
                     {formatDate(selectedRequest.tanggal_mulai)} — {formatDate(selectedRequest.tanggal_selesai)}
-                    <span className="ml-1 text-slate-500">({hitungHari(selectedRequest.tanggal_mulai, selectedRequest.tanggal_selesai)} hari)</span>
+                    <span className="ml-1 text-slate-500 dark:text-slate-400">({hitungHari(selectedRequest.tanggal_mulai, selectedRequest.tanggal_selesai)} hari)</span>
                   </span>
                 </div>
                 <div className="flex items-start gap-2 text-xs">
-                  <span className="text-slate-500 w-20 shrink-0">Alasan:</span>
-                  <span className="text-slate-700 italic">{selectedRequest.alasan}</span>
+                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">Alasan:</span>
+                  <span className="text-slate-700 dark:text-slate-300 italic">{selectedRequest.alasan}</span>
                 </div>
               </div>
 
-              {/* Foto Surat Dokter di Modal */}
               {selectedRequest.attachment_url && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     📎 Surat Dokter:
                   </label>
                   <button
@@ -587,10 +549,10 @@ export default function AdminIzinPage() {
                     <img
                       src={selectedRequest.attachment_url}
                       alt="Surat dokter"
-                      className="w-full max-h-64 object-contain rounded-xl border-2 border-slate-200 shadow-md transition group-hover:border-indigo-400 bg-slate-50"
+                      className="w-full max-h-64 object-contain rounded-xl border-2 border-slate-200 dark:border-slate-600 shadow-md transition group-hover:border-indigo-400 bg-slate-50 dark:bg-slate-900"
                     />
                     <div className="absolute inset-0 rounded-xl bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
-                      <div className="opacity-0 group-hover:opacity-100 transition bg-white/90 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold text-slate-700 shadow-lg">
+                      <div className="opacity-0 group-hover:opacity-100 transition bg-white/90 dark:bg-slate-800/90 backdrop-blur px-3 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-lg">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="11" cy="11" r="8"/>
                           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -605,8 +567,8 @@ export default function AdminIzinPage() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Catatan Admin <span className="text-slate-400 font-normal">(opsional)</span>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Catatan Admin <span className="text-slate-400 dark:text-slate-500 font-normal">(opsional)</span>
                 </label>
                 <textarea
                   value={catatan}
@@ -616,12 +578,12 @@ export default function AdminIzinPage() {
                     ? 'Contoh: Disetujui, jangan lupa lapor ke atasan...'
                     : 'Contoh: Ditolak karena tanggal berbenturan dengan jadwal...'}
                   rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none disabled:bg-slate-50 text-sm"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none disabled:bg-slate-50 dark:disabled:bg-slate-900 text-sm"
                 />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex gap-2 justify-end shrink-0">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-2 justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -630,7 +592,7 @@ export default function AdminIzinPage() {
                   setCatatan('')
                 }}
                 disabled={!!processing}
-                className="px-4 py-2 text-sm text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition disabled:opacity-50"
+                className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg transition disabled:opacity-50"
               >
                 Batal
               </button>
@@ -693,6 +655,6 @@ export default function AdminIzinPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }
