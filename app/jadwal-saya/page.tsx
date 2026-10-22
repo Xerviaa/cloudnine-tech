@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 type Profile = {
@@ -111,9 +110,6 @@ export default function JadwalSayaPage() {
     setSwaps((data as any) || [])
   }
 
-  // ============================================================
-  // FIX: calendarDays return array of string YYYY-MM-DD atau null
-  // ============================================================
   const calendarDays = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const firstDay = new Date(year, month - 1, 1)
@@ -140,7 +136,6 @@ export default function JadwalSayaPage() {
     return schedules.find((s) => s.tanggal === dateStr) || null
   }
 
-  // Ambil semua hari libur di bulan ini (untuk info referensi)
   const hariLiburBulanIni = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const daysInMonth = new Date(year, month, 0).getDate()
@@ -248,9 +243,9 @@ export default function JadwalSayaPage() {
     })
 
   const statusConfig = {
-    pending: { label: 'Menunggu', emoji: '⏳', badge: 'bg-amber-100 text-amber-700 border-amber-300' },
-    disetujui: { label: 'Disetujui', emoji: '✅', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
-    ditolak: { label: 'Ditolak', emoji: '❌', badge: 'bg-rose-100 text-rose-700 border-rose-300' },
+    pending: { label: 'Menunggu', emoji: '⏳', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' },
+    disetujui: { label: 'Disetujui', emoji: '✅', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' },
+    ditolak: { label: 'Ditolak', emoji: '❌', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800' },
   }
 
   const monthOptions = useMemo(() => {
@@ -269,12 +264,12 @@ export default function JadwalSayaPage() {
 
   if (loading || !profile) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat jadwal...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat jadwal...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -288,354 +283,324 @@ export default function JadwalSayaPage() {
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
+    <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 transition-colors">
+          📅 Jadwal Saya
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">
+          Lihat jadwal libur/kerja Anda & ajukan tukar libur
+        </p>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/absen" className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-4 shadow-lg shadow-blue-500/25">
+          <p className="text-xs text-white/90 font-medium">🏖️ Libur</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.libur}</p>
+          <p className="text-[10px] text-white/70">hari</p>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/25">
+          <p className="text-xs text-white/90 font-medium">💼 Kerja</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.kerja}</p>
+          <p className="text-[10px] text-white/70">hari</p>
+        </div>
+        <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-4 shadow-lg shadow-orange-500/25">
+          <p className="text-xs text-white/90 font-medium">⚡ Lembur</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.lembur}</p>
+          <p className="text-[10px] text-white/70">hari</p>
+        </div>
+      </div>
+
+      {/* Filter Bulan */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6 transition-colors">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
+              📅
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Jadwal Saya</p>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block">Bulan</label>
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="mt-0.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium cursor-pointer"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
-          </Link>
+          </div>
 
-          <Link
-            href="/absen"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 text-white font-semibold text-sm rounded-xl shadow-lg transition-all hover:scale-[1.02] ${
+              showForm
+                ? 'bg-gradient-to-r from-slate-500 to-slate-600'
+                : 'bg-gradient-to-r from-indigo-500 to-violet-600'
+            }`}
           >
-            ← Kembali
-          </Link>
+            {showForm ? '✕ Tutup' : '🔄 Ajukan Tukar Libur'}
+          </button>
         </div>
-      </header>
+      </div>
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            📅 Jadwal Saya
-          </h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Lihat jadwal libur/kerja Anda & ajukan tukar libur
+      {/* Form Tukar Libur */}
+      {showForm && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">🔄 Form Tukar Libur</h2>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tanggal Libur Asal */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Tanggal Libur Asal <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={tanggalAsal}
+                onChange={(e) => setTanggalAsal(e.target.value)}
+                disabled={submitting}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                Pilih tanggal libur Anda yang ingin ditukar (harus hari libur)
+              </p>
+              
+              {hariLiburBulanIni.length > 0 && (
+                <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+                  <p className="text-[10px] text-blue-700 dark:text-blue-400 font-semibold mb-1">📅 Hari libur Anda bulan ini:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {hariLiburBulanIni.map((s) => {
+                      const [y, m, d] = s.tanggal.split('-').map(Number)
+                      const dateObj = new Date(y, m - 1, d)
+                      return (
+                        <span key={s.id} className="text-[10px] bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-300 px-1.5 py-0.5 rounded">
+                          {d} {dateObj.toLocaleDateString('id-ID', { weekday: 'short' })}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Tanggal Libur Pengganti */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Tanggal Libur Pengganti <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={tanggalPengganti}
+                onChange={(e) => setTanggalPengganti(e.target.value)}
+                disabled={submitting}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                Tanggal libur pengganti yang Anda inginkan (bebas pilih tanggal)
+              </p>
+            </div>
+
+            {/* Alasan */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Alasan <span className="text-rose-500">*</span> <span className="text-slate-400 dark:text-slate-500 font-normal">(min. 10 karakter)</span>
+              </label>
+              <textarea
+                value={alasan}
+                onChange={(e) => setAlasan(e.target.value)}
+                disabled={submitting}
+                placeholder="Contoh: Ada acara keluarga di hari libur saya, mohon tukar ke hari lain..."
+                rows={3}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-900 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{alasan.length} karakter</p>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-2">
+              <span className="text-amber-600 dark:text-amber-400 text-lg">💡</span>
+              <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
+                <strong>Penting:</strong> Tanggal Libur Asal <strong>harus hari libur Anda</strong> (lihat info di atas). Kalau salah pilih, pengajuan akan ditolak sistem. Admin yang akan approve/reject tukar libur ini.
+              </p>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                disabled={submitting}
+                className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg font-medium transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 text-sm text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg font-semibold shadow-lg inline-flex items-center gap-2 disabled:opacity-50 transition-all"
+              >
+                {submitting ? 'Mengirim...' : '📤 Kirim Pengajuan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Kalender */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+        <div className="grid grid-cols-7 gap-1.5 mb-2">
+          {dayNames.map((day, idx) => (
+            <div key={day} className={`text-center text-[10px] font-bold uppercase py-1 ${idx >= 5 ? 'text-rose-500' : 'text-slate-500 dark:text-slate-400'}`}>
+              {day}
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5">
+          {calendarDays.map((dateStr, idx) => {
+            if (!dateStr) return <div key={`empty-${idx}`} className="aspect-square" />
+
+            const [y, m, d] = dateStr.split('-').map(Number)
+            const sch = getScheduleForDate(dateStr)
+            const isToday = dateStr === todayStr
+
+            let bg = 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
+            let icon = ''
+
+            if (sch) {
+              if (sch.tipe === 'libur') {
+                bg = 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300'
+                icon = '🏖️'
+              } else if (sch.tipe === 'kerja') {
+                bg = 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
+                icon = '💼'
+              } else if (sch.tipe === 'lembur') {
+                bg = 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-800 text-orange-800 dark:text-orange-300'
+                icon = '⚡'
+              }
+            }
+
+            return (
+              <div
+                key={dateStr}
+                className={`aspect-square rounded-lg border-2 ${bg} p-1.5 flex flex-col items-center justify-center text-center transition-colors ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-slate-800' : ''}`}
+              >
+                <span className={`text-sm font-bold ${isToday ? 'text-indigo-700 dark:text-indigo-400' : ''}`}>
+                  {d}
+                </span>
+                {icon && <span className="text-base mt-0.5">{icon}</span>}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-4 flex items-center gap-4 flex-wrap text-xs pt-4 border-t border-slate-100 dark:border-slate-700">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/50 border border-blue-300 dark:border-blue-700" />
+            <span className="text-slate-600 dark:text-slate-300">Libur</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700" />
+            <span className="text-slate-600 dark:text-slate-300">Kerja</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-orange-100 dark:bg-orange-900/50 border border-orange-300 dark:border-orange-700" />
+            <span className="text-slate-600 dark:text-slate-300">Lembur</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Riwayat Pengajuan Tukar Libur */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-gradient-to-r from-indigo-50/50 to-violet-50/50 dark:from-slate-800 dark:to-slate-800">
+          <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">🔄 Riwayat Tukar Libur</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {swaps.length} pengajuan total
           </p>
         </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-4 shadow-lg shadow-blue-500/25">
-            <p className="text-xs text-white/90 font-medium">🏖️ Libur</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.libur}</p>
-            <p className="text-[10px] text-white/70">hari</p>
+        {swaps.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-5xl mb-3 opacity-40">📭</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada pengajuan tukar libur</p>
           </div>
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl p-4 shadow-lg shadow-emerald-500/25">
-            <p className="text-xs text-white/90 font-medium">💼 Kerja</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.kerja}</p>
-            <p className="text-[10px] text-white/70">hari</p>
-          </div>
-          <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-4 shadow-lg shadow-orange-500/25">
-            <p className="text-xs text-white/90 font-medium">⚡ Lembur</p>
-            <p className="text-3xl font-bold text-white mt-1">{stats.lembur}</p>
-            <p className="text-[10px] text-white/70">hari</p>
-          </div>
-        </div>
-
-        {/* Filter Bulan */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg">
-                📅
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-500 block">Bulan</label>
-                <select
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="mt-0.5 px-3 py-1.5 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium cursor-pointer"
-                >
-                  {monthOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 text-white font-semibold text-sm rounded-xl shadow-lg transition-all hover:scale-[1.02] ${
-                showForm
-                  ? 'bg-gradient-to-r from-slate-500 to-slate-600'
-                  : 'bg-gradient-to-r from-indigo-500 to-violet-600'
-              }`}
-            >
-              {showForm ? '✕ Tutup' : '🔄 Ajukan Tukar Libur'}
-            </button>
-          </div>
-        </div>
-
-        {/* Form Tukar Libur */}
-        {showForm && (
-          <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">🔄 Form Tukar Libur</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Tanggal Libur Asal - Date Picker */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Tanggal Libur Asal <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={tanggalAsal}
-                  onChange={(e) => setTanggalAsal(e.target.value)}
-                  disabled={submitting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Pilih tanggal libur Anda yang ingin ditukar (harus hari libur)
-                </p>
-                
-                {/* Info libur bulan ini sebagai referensi */}
-                {hariLiburBulanIni.length > 0 && (
-                  <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
-                    <p className="text-[10px] text-blue-700 font-semibold mb-1">📅 Hari libur Anda bulan ini:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {hariLiburBulanIni.map((s) => {
-                        const [y, m, d] = s.tanggal.split('-').map(Number)
-                        const dateObj = new Date(y, m - 1, d)
-                        return (
-                          <span key={s.id} className="text-[10px] bg-white border border-blue-300 text-blue-800 px-1.5 py-0.5 rounded">
-                            {d} {dateObj.toLocaleDateString('id-ID', { weekday: 'short' })}
-                          </span>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Tanggal Libur Pengganti - Date Picker */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Tanggal Libur Pengganti <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={tanggalPengganti}
-                  onChange={(e) => setTanggalPengganti(e.target.value)}
-                  disabled={submitting}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">
-                  Tanggal libur pengganti yang Anda inginkan (bebas pilih tanggal)
-                </p>
-              </div>
-
-              {/* Alasan */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Alasan <span className="text-rose-500">*</span> <span className="text-slate-400 font-normal">(min. 10 karakter)</span>
-                </label>
-                <textarea
-                  value={alasan}
-                  onChange={(e) => setAlasan(e.target.value)}
-                  disabled={submitting}
-                  placeholder="Contoh: Ada acara keluarga di hari libur saya, mohon tukar ke hari lain..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm"
-                />
-                <p className="text-[10px] text-slate-400 mt-1">{alasan.length} karakter</p>
-              </div>
-
-              {/* Info Box */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                <span className="text-amber-600 text-lg">💡</span>
-                <p className="text-xs text-amber-700 leading-snug">
-                  <strong>Penting:</strong> Tanggal Libur Asal <strong>harus hari libur Anda</strong> (lihat info di atas). Kalau salah pilih, pengajuan akan ditolak sistem. Admin yang akan approve/reject tukar libur ini.
-                </p>
-              </div>
-
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  disabled={submitting}
-                  className="px-4 py-2 text-sm text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-5 py-2 text-sm text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg font-semibold shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
-                >
-                  {submitting ? 'Mengirim...' : '📤 Kirim Pengajuan'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Kalender */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="grid grid-cols-7 gap-1.5 mb-2">
-            {dayNames.map((day, idx) => (
-              <div key={day} className={`text-center text-[10px] font-bold uppercase py-1 ${idx >= 5 ? 'text-rose-500' : 'text-slate-500'}`}>
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1.5">
-            {calendarDays.map((dateStr, idx) => {
-              if (!dateStr) return <div key={`empty-${idx}`} className="aspect-square" />
-
-              const [y, m, d] = dateStr.split('-').map(Number)
-              const sch = getScheduleForDate(dateStr)
-              const isToday = dateStr === todayStr
-
-              let bg = 'bg-slate-50 border-slate-200 text-slate-400'
-              let icon = ''
-
-              if (sch) {
-                if (sch.tipe === 'libur') {
-                  bg = 'bg-blue-100 border-blue-300 text-blue-800'
-                  icon = '🏖️'
-                } else if (sch.tipe === 'kerja') {
-                  bg = 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                  icon = '💼'
-                } else if (sch.tipe === 'lembur') {
-                  bg = 'bg-orange-100 border-orange-300 text-orange-800'
-                  icon = '⚡'
-                }
-              }
-
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-700">
+            {swaps.map((s) => {
+              const cfg = statusConfig[s.status]
               return (
-                <div
-                  key={dateStr}
-                  className={`aspect-square rounded-lg border-2 ${bg} p-1.5 flex flex-col items-center justify-center text-center ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
-                >
-                  <span className={`text-sm font-bold ${isToday ? 'text-indigo-700' : ''}`}>
-                    {d}
-                  </span>
-                  {icon && <span className="text-base mt-0.5">{icon}</span>}
+                <div key={s.id} className="p-5 hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.badge} mb-2`}>
+                        {cfg.emoji} {cfg.label}
+                      </span>
+
+                      <div className="flex items-center gap-2 flex-wrap text-sm">
+                        <span className="text-slate-600 dark:text-slate-300">Dari:</span>
+                        <span className="font-semibold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded">
+                          {formatDate(s.tanggal_libur_asal)}
+                        </span>
+                        <span className="text-slate-400 dark:text-slate-500">→</span>
+                        <span className="text-slate-600 dark:text-slate-300">Ke:</span>
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded">
+                          {formatDate(s.tanggal_libur_pengganti)}
+                        </span>
+                      </div>
+
+                      <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">{s.alasan}</p>
+
+                      {s.catatan_admin && (
+                        <div className={`mt-2 border-l-2 pl-3 py-2 rounded-r ${
+                          s.status === 'disetujui' 
+                            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-400 dark:border-emerald-700' 
+                            : 'bg-rose-50 dark:bg-rose-900/20 border-rose-400 dark:border-rose-700'
+                        }`}>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Catatan Admin:</p>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 italic">"{s.catatan_admin}"</p>
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">
+                        Diajukan: {formatDateTime(s.created_at)}
+                      </p>
+                    </div>
+
+                    {s.status === 'pending' && (
+                      <button
+                        onClick={() => handleDeleteSwap(s.id)}
+                        className="text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600 border border-rose-200 dark:border-rose-800 hover:border-rose-600 px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0"
+                      >
+                        🗑️ Batalkan
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
+        )}
+      </div>
 
-          {/* Legend */}
-          <div className="mt-4 flex items-center gap-4 flex-wrap text-xs pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-blue-100 border border-blue-300" />
-              <span className="text-slate-600">Libur</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-emerald-100 border border-emerald-300" />
-              <span className="text-slate-600">Kerja</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded bg-orange-100 border border-orange-300" />
-              <span className="text-slate-600">Lembur</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Riwayat Pengajuan Tukar Libur */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50/50 to-violet-50/50">
-            <h2 className="text-base font-bold text-slate-800">🔄 Riwayat Tukar Libur</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {swaps.length} pengajuan total
-            </p>
-          </div>
-
-          {swaps.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-5xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 text-sm font-medium">Belum ada pengajuan tukar libur</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {swaps.map((s) => {
-                const cfg = statusConfig[s.status]
-                return (
-                  <div key={s.id} className="p-5 hover:bg-slate-50/50 transition">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${cfg.badge} mb-2`}>
-                          {cfg.emoji} {cfg.label}
-                        </span>
-
-                        <div className="flex items-center gap-2 flex-wrap text-sm">
-                          <span className="text-slate-600">Dari:</span>
-                          <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
-                            {formatDate(s.tanggal_libur_asal)}
-                          </span>
-                          <span className="text-slate-400">→</span>
-                          <span className="text-slate-600">Ke:</span>
-                          <span className="font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                            {formatDate(s.tanggal_libur_pengganti)}
-                          </span>
-                        </div>
-
-                        <p className="text-sm text-slate-600 mt-2">{s.alasan}</p>
-
-                        {s.catatan_admin && (
-                          <div className={`mt-2 border-l-2 pl-3 py-2 rounded-r ${
-                            s.status === 'disetujui' ? 'bg-emerald-50 border-emerald-400' : 'bg-rose-50 border-rose-400'
-                          }`}>
-                            <p className="text-[10px] text-slate-500 font-medium">Catatan Admin:</p>
-                            <p className="text-xs text-slate-700 italic">"{s.catatan_admin}"</p>
-                          </div>
-                        )}
-
-                        <p className="text-[10px] text-slate-400 mt-2">
-                          Diajukan: {formatDateTime(s.created_at)}
-                        </p>
-                      </div>
-
-                      {s.status === 'pending' && (
-                        <button
-                          onClick={() => handleDeleteSwap(s.id)}
-                          className="text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 hover:border-rose-600 px-3 py-1.5 rounded-lg text-xs font-medium transition shrink-0"
-                        >
-                          🗑️ Batalkan
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Info Box */}
-        <div className="mt-6 bg-indigo-50 border border-indigo-200 rounded-2xl p-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">💡</span>
-            <div className="flex-1 text-xs text-indigo-800 space-y-1">
-              <p className="font-semibold">Cara Kerja Tukar Libur:</p>
-              <ul className="list-disc list-inside space-y-0.5 ml-1">
-                <li>Pilih tanggal libur Anda yang ingin ditukar</li>
-                <li>Pilih tanggal libur pengganti yang Anda inginkan</li>
-                <li>Berikan alasan yang jelas</li>
-                <li>Admin akan memutuskan approve/reject</li>
-                <li>Kalau disetujui, jadwal libur otomatis berubah</li>
-              </ul>
-            </div>
+      {/* Info Box */}
+      <div className="mt-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 transition-colors">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl">💡</span>
+          <div className="flex-1 text-xs text-indigo-800 dark:text-indigo-300 space-y-1">
+            <p className="font-semibold">Cara Kerja Tukar Libur:</p>
+            <ul className="list-disc list-inside space-y-0.5 ml-1">
+              <li>Pilih tanggal libur Anda yang ingin ditukar</li>
+              <li>Pilih tanggal libur pengganti yang Anda inginkan</li>
+              <li>Berikan alasan yang jelas</li>
+              <li>Admin akan memutuskan approve/reject</li>
+              <li>Kalau disetujui, jadwal libur otomatis berubah</li>
+            </ul>
           </div>
         </div>
       </div>
-    </main>
+    </div>
   )
 }
