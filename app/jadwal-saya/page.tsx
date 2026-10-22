@@ -87,15 +87,16 @@ export default function JadwalSayaPage() {
 
   async function loadSchedules(userId: string) {
     const [year, month] = selectedMonth.split('-').map(Number)
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0, 23, 59, 59)
+    const firstDayStr = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const lastDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
     const { data } = await supabase
       .from('employee_schedules')
       .select('*')
       .eq('user_id', userId)
-      .gte('tanggal', start.toISOString().split('T')[0])
-      .lte('tanggal', end.toISOString().split('T')[0])
+      .gte('tanggal', firstDayStr)
+      .lte('tanggal', lastDayStr)
 
     setSchedules((data as any) || [])
   }
@@ -111,62 +112,54 @@ export default function JadwalSayaPage() {
   }
 
   // ============================================================
-  // Generate kalender bulan
+  // FIX: calendarDays return array of string YYYY-MM-DD atau null
   // ============================================================
   const calendarDays = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const firstDay = new Date(year, month - 1, 1)
-    const lastDay = new Date(year, month, 0)
-    const daysInMonth = lastDay.getDate()
+    const daysInMonth = new Date(year, month, 0).getDate()
     const firstDayOfWeek = firstDay.getDay()
     const startOffset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
 
-    const days: (Date | null)[] = []
+    const days: (string | null)[] = []
     for (let i = 0; i < startOffset; i++) days.push(null)
     for (let d = 1; d <= daysInMonth; d++) {
-      days.push(new Date(year, month - 1, d))
+      days.push(`${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
     }
     return days
   }, [selectedMonth])
 
-  function isWeekend(date: Date) {
-    const day = date.getDay()
+  function isWeekend(dateStr: string) {
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const dateObj = new Date(y, m - 1, d)
+    const day = dateObj.getDay()
     return day === 0 || day === 6
   }
 
-  function getScheduleForDate(date: Date): Schedule | null {
-    const dateStr = date.toISOString().split('T')[0]
+  function getScheduleForDate(dateStr: string): Schedule | null {
     return schedules.find((s) => s.tanggal === dateStr) || null
   }
 
   // Ambil semua hari libur di bulan ini (untuk dropdown asal)
-  // Termasuk hari Sabtu/Minggu yang tidak ada di database (default libur)
   const hariLiburBulanIni = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const daysInMonth = new Date(year, month, 0).getDate()
     const liburList: { id: string; tanggal: string }[] = []
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateObj = new Date(year, month - 1, d)
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-      
       const sch = schedules.find((s) => s.tanggal === dateStr)
-      
-      // Logika: 
-      // 1. Jika ada di database dan tipenya 'libur' -> Libur
-      // 2. Jika tidak ada di database TAPI hari Sabtu/Minggu -> Libur (default)
-      // 3. Jika ada di database dan tipenya 'kerja'/'lembur' -> BUKAN Libur (jangan dimasukkan)
       
       let isLibur = false
       if (sch) {
         isLibur = sch.tipe === 'libur'
       } else {
-        isLibur = isWeekend(dateObj)
+        isLibur = isWeekend(dateStr)
       }
 
       if (isLibur) {
         liburList.push({
-          id: dateStr, // pakai string tanggal sebagai id unik
+          id: dateStr,
           tanggal: dateStr
         })
       }
@@ -174,12 +167,11 @@ export default function JadwalSayaPage() {
 
     return liburList
   }, [schedules, selectedMonth])
-  // Cek apakah tanggal tertentu libur
+
   function isLibur(dateStr: string): boolean {
     const sch = schedules.find((s) => s.tanggal === dateStr)
     if (!sch) {
-      const d = new Date(dateStr)
-      return isWeekend(d)
+      return isWeekend(dateStr)
     }
     return sch.tipe === 'libur'
   }
@@ -243,8 +235,11 @@ export default function JadwalSayaPage() {
     if (profile) await loadSwaps(profile.id)
   }
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+  const formatDate = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number)
+    const dateObj = new Date(y, m - 1, d)
+    return dateObj.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
 
   const formatDateTime = (iso: string) =>
     new Date(iso).toLocaleString('id-ID', {
@@ -288,6 +283,10 @@ export default function JadwalSayaPage() {
     kerja: schedules.filter((s) => s.tipe === 'kerja').length,
     lembur: schedules.filter((s) => s.tipe === 'lembur').length,
   }
+
+  // Dapatkan string tanggal hari ini (YYYY-MM-DD) pakai lokal
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   return (
     <main className="min-h-screen bg-slate-50 relative overflow-hidden">
@@ -405,11 +404,15 @@ export default function JadwalSayaPage() {
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                   >
                     <option value="">— Pilih tanggal libur Anda —</option>
-                    {hariLiburBulanIni.map((s) => (
-                      <option key={s.id} value={s.tanggal}>
-                        {formatDate(s.tanggal)} ({new Date(s.tanggal).toLocaleDateString('id-ID', { weekday: 'long' })})
-                      </option>
-                    ))}
+                    {hariLiburBulanIni.map((s) => {
+                      const [y, m, d] = s.tanggal.split('-').map(Number)
+                      const dateObj = new Date(y, m - 1, d)
+                      return (
+                        <option key={s.id} value={s.tanggal}>
+                          {formatDate(s.tanggal)} ({dateObj.toLocaleDateString('id-ID', { weekday: 'long' })})
+                        </option>
+                      )
+                    })}
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">Tanggal libur yang ingin Anda tukar</p>
                 </div>
@@ -476,11 +479,12 @@ export default function JadwalSayaPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-1.5">
-            {calendarDays.map((date, idx) => {
-              if (!date) return <div key={`empty-${idx}`} className="aspect-square" />
+            {calendarDays.map((dateStr, idx) => {
+              if (!dateStr) return <div key={`empty-${idx}`} className="aspect-square" />
 
-              const sch = getScheduleForDate(date)
-              const isToday = date.toISOString().split('T')[0] === new Date().toISOString().split('T')[0]
+              const [y, m, d] = dateStr.split('-').map(Number)
+              const sch = getScheduleForDate(dateStr)
+              const isToday = dateStr === todayStr
 
               let bg = 'bg-slate-50 border-slate-200 text-slate-400'
               let icon = ''
@@ -500,11 +504,11 @@ export default function JadwalSayaPage() {
 
               return (
                 <div
-                  key={date.toISOString()}
+                  key={dateStr}
                   className={`aspect-square rounded-lg border-2 ${bg} p-1.5 flex flex-col items-center justify-center text-center ${isToday ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}`}
                 >
                   <span className={`text-sm font-bold ${isToday ? 'text-indigo-700' : ''}`}>
-                    {date.getDate()}
+                    {d}
                   </span>
                   {icon && <span className="text-base mt-0.5">{icon}</span>}
                 </div>
