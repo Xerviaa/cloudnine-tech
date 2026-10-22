@@ -140,7 +140,7 @@ export default function JadwalSayaPage() {
     return schedules.find((s) => s.tanggal === dateStr) || null
   }
 
-  // Ambil semua hari libur di bulan ini (untuk dropdown asal)
+  // Ambil semua hari libur di bulan ini (untuk info referensi)
   const hariLiburBulanIni = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     const daysInMonth = new Date(year, month, 0).getDate()
@@ -193,7 +193,7 @@ export default function JadwalSayaPage() {
       return
     }
     if (!isLibur(tanggalAsal)) {
-      alert('Tanggal asal harus hari libur Anda.')
+      alert('Tanggal asal harus hari libur Anda. Silakan cek info hari libur di bawah form.')
       return
     }
 
@@ -284,7 +284,6 @@ export default function JadwalSayaPage() {
     lembur: schedules.filter((s) => s.tipe === 'lembur').length,
   }
 
-  // Dapatkan string tanggal hari ini (YYYY-MM-DD) pakai lokal
   const today = new Date()
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
@@ -387,84 +386,101 @@ export default function JadwalSayaPage() {
           <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 mb-6">
             <h2 className="text-lg font-bold text-slate-800 mb-4">🔄 Form Tukar Libur</h2>
 
-            {hariLiburBulanIni.length === 0 ? (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-                ⚠️ Belum ada jadwal libur di bulan ini. Hubungi admin untuk set jadwal libur dulu.
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Tanggal Libur Asal - Date Picker */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Tanggal Libur Asal <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={tanggalAsal}
+                  onChange={(e) => setTanggalAsal(e.target.value)}
+                  disabled={submitting}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Pilih tanggal libur Anda yang ingin ditukar (harus hari libur)
+                </p>
+                
+                {/* Info libur bulan ini sebagai referensi */}
+                {hariLiburBulanIni.length > 0 && (
+                  <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-2">
+                    <p className="text-[10px] text-blue-700 font-semibold mb-1">📅 Hari libur Anda bulan ini:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {hariLiburBulanIni.map((s) => {
+                        const [y, m, d] = s.tanggal.split('-').map(Number)
+                        const dateObj = new Date(y, m - 1, d)
+                        return (
+                          <span key={s.id} className="text-[10px] bg-white border border-blue-300 text-blue-800 px-1.5 py-0.5 rounded">
+                            {d} {dateObj.toLocaleDateString('id-ID', { weekday: 'short' })}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Tanggal Libur Asal <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={tanggalAsal}
-                    onChange={(e) => setTanggalAsal(e.target.value)}
-                    disabled={submitting}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  >
-                    <option value="">— Pilih tanggal libur Anda —</option>
-                    {hariLiburBulanIni.map((s) => {
-                      const [y, m, d] = s.tanggal.split('-').map(Number)
-                      const dateObj = new Date(y, m - 1, d)
-                      return (
-                        <option key={s.id} value={s.tanggal}>
-                          {formatDate(s.tanggal)} ({dateObj.toLocaleDateString('id-ID', { weekday: 'long' })})
-                        </option>
-                      )
-                    })}
-                  </select>
-                  <p className="text-[10px] text-slate-400 mt-1">Tanggal libur yang ingin Anda tukar</p>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Tanggal Libur Pengganti <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={tanggalPengganti}
-                    onChange={(e) => setTanggalPengganti(e.target.value)}
-                    disabled={submitting}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">Tanggal libur pengganti yang Anda inginkan</p>
-                </div>
+              {/* Tanggal Libur Pengganti - Date Picker */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Tanggal Libur Pengganti <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={tanggalPengganti}
+                  onChange={(e) => setTanggalPengganti(e.target.value)}
+                  disabled={submitting}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Tanggal libur pengganti yang Anda inginkan (bebas pilih tanggal)
+                </p>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Alasan <span className="text-rose-500">*</span> <span className="text-slate-400 font-normal">(min. 10 karakter)</span>
-                  </label>
-                  <textarea
-                    value={alasan}
-                    onChange={(e) => setAlasan(e.target.value)}
-                    disabled={submitting}
-                    placeholder="Contoh: Ada acara keluarga di hari libur saya, mohon tukar ke hari lain..."
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">{alasan.length} karakter</p>
-                </div>
+              {/* Alasan */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Alasan <span className="text-rose-500">*</span> <span className="text-slate-400 font-normal">(min. 10 karakter)</span>
+                </label>
+                <textarea
+                  value={alasan}
+                  onChange={(e) => setAlasan(e.target.value)}
+                  disabled={submitting}
+                  placeholder="Contoh: Ada acara keluarga di hari libur saya, mohon tukar ke hari lain..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 bg-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none text-sm"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">{alasan.length} karakter</p>
+              </div>
 
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    disabled={submitting}
-                    className="px-4 py-2 text-sm text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-5 py-2 text-sm text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg font-semibold shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {submitting ? 'Mengirim...' : '📤 Kirim Pengajuan'}
-                  </button>
-                </div>
-              </form>
-            )}
+              {/* Info Box */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                <span className="text-amber-600 text-lg">💡</span>
+                <p className="text-xs text-amber-700 leading-snug">
+                  <strong>Penting:</strong> Tanggal Libur Asal <strong>harus hari libur Anda</strong> (lihat info di atas). Kalau salah pilih, pengajuan akan ditolak sistem. Admin yang akan approve/reject tukar libur ini.
+                </p>
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  disabled={submitting}
+                  className="px-4 py-2 text-sm text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 text-sm text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 rounded-lg font-semibold shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
+                >
+                  {submitting ? 'Mengirim...' : '📤 Kirim Pengajuan'}
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
