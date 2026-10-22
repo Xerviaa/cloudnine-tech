@@ -32,11 +32,20 @@ type SwapRequest = {
   created_at: string
 }
 
+type LeaveRequest = {
+  id: number
+  tipe: 'izin' | 'sakit' | 'cuti'
+  tanggal_mulai: string
+  tanggal_selesai: string
+  status: 'pending' | 'disetujui' | 'ditolak'
+}
+
 export default function JadwalSayaPage() {
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [swaps, setSwaps] = useState<SwapRequest[]>([])
+  const [cutiDates, setCutiDates] = useState<Set<string>>(new Set())
   const [submitting, setSubmitting] = useState(false)
 
   // Filter bulan
@@ -74,6 +83,7 @@ export default function JadwalSayaPage() {
       await Promise.all([
         loadSchedules(user.id),
         loadSwaps(user.id),
+        loadCutiDates(user.id),
       ])
       setLoading(false)
     }
@@ -81,7 +91,10 @@ export default function JadwalSayaPage() {
   }, [])
 
   useEffect(() => {
-    if (profile) loadSchedules(profile.id)
+    if (profile) {
+      loadSchedules(profile.id)
+      loadCutiDates(profile.id)
+    }
   }, [selectedMonth, profile])
 
   async function loadSchedules(userId: string) {
@@ -108,6 +121,33 @@ export default function JadwalSayaPage() {
       .order('created_at', { ascending: false })
 
     setSwaps((data as any) || [])
+  }
+
+  async function loadCutiDates(userId: string) {
+    const [year, month] = selectedMonth.split('-').map(Number)
+    const firstDayStr = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate()
+    const lastDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+
+    const { data } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('tipe', 'cuti')
+      .eq('status', 'disetujui')
+      .lte('tanggal_mulai', lastDayStr)
+      .gte('tanggal_selesai', firstDayStr)
+
+    const dates = new Set<string>()
+    ;(data || []).forEach((req: LeaveRequest) => {
+      const start = new Date(req.tanggal_mulai)
+      const end = new Date(req.tanggal_selesai)
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        dates.add(dateStr)
+      }
+    })
+    setCutiDates(dates)
   }
 
   const calendarDays = useMemo(() => {
@@ -277,6 +317,7 @@ export default function JadwalSayaPage() {
     libur: schedules.filter((s) => s.tipe === 'libur').length,
     kerja: schedules.filter((s) => s.tipe === 'kerja').length,
     lembur: schedules.filter((s) => s.tipe === 'lembur').length,
+    cuti: cutiDates.size,
   }
 
   const today = new Date()
@@ -294,7 +335,7 @@ export default function JadwalSayaPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-4 shadow-lg shadow-blue-500/25">
           <p className="text-xs text-white/90 font-medium">🏖️ Libur</p>
           <p className="text-3xl font-bold text-white mt-1">{stats.libur}</p>
@@ -308,6 +349,11 @@ export default function JadwalSayaPage() {
         <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl p-4 shadow-lg shadow-orange-500/25">
           <p className="text-xs text-white/90 font-medium">⚡ Lembur</p>
           <p className="text-3xl font-bold text-white mt-1">{stats.lembur}</p>
+          <p className="text-[10px] text-white/70">hari</p>
+        </div>
+        <div className="bg-gradient-to-br from-violet-500 to-purple-500 rounded-2xl p-4 shadow-lg shadow-violet-500/25">
+          <p className="text-xs text-white/90 font-medium">🌴 Cuti</p>
+          <p className="text-3xl font-bold text-white mt-1">{stats.cuti}</p>
           <p className="text-[10px] text-white/70">hari</p>
         </div>
       </div>
@@ -352,7 +398,6 @@ export default function JadwalSayaPage() {
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">🔄 Form Tukar Libur</h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Tanggal Libur Asal */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Tanggal Libur Asal <span className="text-rose-500">*</span>
@@ -386,7 +431,6 @@ export default function JadwalSayaPage() {
               )}
             </div>
 
-            {/* Tanggal Libur Pengganti */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Tanggal Libur Pengganti <span className="text-rose-500">*</span>
@@ -403,7 +447,6 @@ export default function JadwalSayaPage() {
               </p>
             </div>
 
-            {/* Alasan */}
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Alasan <span className="text-rose-500">*</span> <span className="text-slate-400 dark:text-slate-500 font-normal">(min. 10 karakter)</span>
@@ -419,7 +462,6 @@ export default function JadwalSayaPage() {
               <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{alasan.length} karakter</p>
             </div>
 
-            {/* Info Box */}
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-start gap-2">
               <span className="text-amber-600 dark:text-amber-400 text-lg">💡</span>
               <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
@@ -465,11 +507,16 @@ export default function JadwalSayaPage() {
             const [y, m, d] = dateStr.split('-').map(Number)
             const sch = getScheduleForDate(dateStr)
             const isToday = dateStr === todayStr
+            const isCuti = cutiDates.has(dateStr)
 
             let bg = 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500'
             let icon = ''
 
-            if (sch) {
+            // Prioritas: Cuti > Lembur > Kerja > Libur
+            if (isCuti) {
+              bg = 'bg-violet-100 dark:bg-violet-900/30 border-violet-300 dark:border-violet-800 text-violet-800 dark:text-violet-300'
+              icon = '🌴'
+            } else if (sch) {
               if (sch.tipe === 'libur') {
                 bg = 'bg-blue-100 dark:bg-blue-900/30 border-blue-300 dark:border-blue-800 text-blue-800 dark:text-blue-300'
                 icon = '🏖️'
@@ -509,6 +556,10 @@ export default function JadwalSayaPage() {
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded bg-orange-100 dark:bg-orange-900/50 border border-orange-300 dark:border-orange-700" />
             <span className="text-slate-600 dark:text-slate-300">Lembur</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded bg-violet-100 dark:bg-violet-900/50 border border-violet-300 dark:border-violet-700" />
+            <span className="text-slate-600 dark:text-slate-300">Cuti Tahunan</span>
           </div>
         </div>
       </div>
