@@ -34,6 +34,13 @@ export default function AdminPengaturanPage() {
   const [longitude, setLongitude] = useState('')
   const [radius, setRadius] = useState('100')
 
+  // State BARU: Berlaku Mulai
+  const [berlakuMulai, setBerlakuMulai] = useState(() => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return tomorrow.toISOString().split('T')[0]
+  })
+
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -85,7 +92,8 @@ export default function AdminPengaturanPage() {
     setSaving(true)
 
     try {
-      const { error } = await supabase
+      // 1. Update company_settings (untuk display utama)
+      const { error: updateError } = await supabase
         .from('company_settings')
         .update({
           nama_perusahaan: namaPerusahaan,
@@ -100,8 +108,25 @@ export default function AdminPengaturanPage() {
         })
         .eq('id', 1)
 
-      if (error) throw error
-      alert('✅ Pengaturan berhasil disimpan!')
+      if (updateError) throw updateError
+
+      // 2. Simpan ke company_settings_history (untuk logika keterlambatan)
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      const { error: historyError } = await supabase
+        .from('company_settings_history')
+        .insert({
+          jam_masuk: jamMasuk,
+          jam_pulang: jamPulang,
+          jam_istirahat_mulai: jamIstirahatMulai,
+          jam_istirahat_selesai: jamIstirahatSelesai,
+          berlaku_mulai: berlakuMulai,
+          created_by: user?.id,
+        })
+
+      if (historyError) throw historyError
+
+      alert(`✅ Pengaturan disimpan!\n\nJam kantor baru berlaku mulai: ${new Date(berlakuMulai).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`)
       await loadSettings()
     } catch (err: any) {
       alert('Gagal simpan: ' + err.message)
@@ -322,6 +347,23 @@ export default function AdminPengaturanPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+            </div>
+
+            {/* INPUT BARU: Berlaku Mulai */}
+            <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <label className="block text-sm font-bold text-amber-800 mb-1">
+                ⚠️ Jam Kantor Baru Berlaku Mulai Tanggal:
+              </label>
+              <input
+                type="date"
+                value={berlakuMulai}
+                onChange={(e) => setBerlakuMulai(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-amber-300 rounded-lg text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+              <p className="text-[10px] text-amber-700 mt-1">
+                Perubahan jam kantor TIDAK akan mengubah data absensi sebelum tanggal ini. Direkomendasikan memilih <strong>besok</strong> atau tanggal mendatang.
+              </p>
             </div>
           </div>
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AvatarDropdown from '@/components/AvatarDropdown'
-import { JAM_KANTOR, LABEL_JAM, cekTerlambatMasuk, cekStatusKeluar, cekStatusIstirahat } from '@/lib/config/jam-kantor'
+import { LABEL_JAM } from '@/lib/config/jam-kantor'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
 
 type TipeAbsen = 'masuk' | 'keluar' | 'istirahat_mulai' | 'istirahat_selesai'
@@ -20,6 +20,13 @@ type AttendanceLog = {
   is_terlambat: boolean
 }
 
+type JamKantorAktif = {
+  jam_masuk: string
+  jam_pulang: string
+  jam_istirahat_mulai: string
+  jam_istirahat_selesai: string
+}
+
 export default function AbsenPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
@@ -29,6 +36,7 @@ export default function AbsenPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [pendingLeaveCount, setPendingLeaveCount] = useState(0)
+  const [jamKantor, setJamKantor] = useState<JamKantorAktif | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -48,11 +56,43 @@ export default function AbsenPage() {
       const { data: profileData } = await supabase
         .from('profiles').select('*').eq('id', user.id).single()
       setProfile(profileData)
+
+      // Ambil jam kantor yang berlaku hari ini
+      await loadJamKantorHariIni()
+
       await loadData(user.id)
       await loadPendingLeave(user.id)
     }
     loadUser()
   }, [])
+
+  // ============================================================
+  // Ambil jam kantor dari HISTORY (sesuai tanggal hari ini)
+  // ============================================================
+  async function loadJamKantorHariIni() {
+    const today = new Date()
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+    const { data } = await supabase
+      .from('company_settings_history')
+      .select('jam_masuk, jam_pulang, jam_istirahat_mulai, jam_istirahat_selesai')
+      .lte('berlaku_mulai', todayStr)
+      .order('berlaku_mulai', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (data) {
+      setJamKantor(data as JamKantorAktif)
+    } else {
+      // Fallback dari company_settings
+      const { data: current } = await supabase
+        .from('company_settings')
+        .select('jam_masuk, jam_pulang, jam_istirahat_mulai, jam_istirahat_selesai')
+        .eq('id', 1)
+        .single()
+      setJamKantor(current as JamKantorAktif)
+    }
+  }
 
   async function loadData(userId: string) {
     const startOfDay = new Date()
@@ -111,8 +151,66 @@ export default function AbsenPage() {
     })
   }
 
+  // ============================================================
+  // Cek keterlambatan berdasarkan jam kantor yang AKTIF hari ini
+  // ============================================================
+  function cekTerlambatMasukDinamis(jamMasukStr: string): { terlambat: boolean; menit: number } {
+    if (!jamKantor) return { terlambat: false, menit: 0 }
+
+    const now = new Date()
+    const wita = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false })
+    const [h, m] = wita.split('.').map(Number)
+    const menitSekarang = h * 60 + m
+
+    const [jamH, jamM] = jamMasukStr.split(':').map(Number)
+    const menitBatas = jamH * 60 + jamM
+
+    const diff = menitSekarang - menitBatas
+    return { terlambat: diff > 0, menit: diff > 0 ? diff : 0 }
+  }
+
+  function cekStatusKeluarDinamis(): { status: 'normal' | 'pulang_cepat' | 'lewat_batas'; menitCepat: number } {
+    if (!jamKantor) return { status: 'normal', menitCepat: 0 }
+
+    const now = new Date()
+    const wita = now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false })
+    const [h, m] = wita.split('.').map(Number)
+    const menitSekarang = h * 60 + m
+
+    const [jamPH, jamPM] = jamKantor.jam_pulang.split(':').map(Number)
+    const menitPulang = jamPH * 60 + jamPM
+
+    // Batas maksimal pulang = jam pulang + 4 jam (misal 16:30 + 4 = 20:30)
+    const batasMaksimal = menitPulang + (4 * 60)
+
+    if (menitSekarang > batasMaksimal) {
+      return { status: 'lewat_batas', menitCepat: 0 }
+    }
+    if (menitSekarang < menitPulang) {
+      return { status: 'pulang_cepat', menitCepat: menitPulang - menitSekarang }
+    }
+    return { status: 'normal', menitCepat: 0 }
+  }
+
+  function cekStatusIstirahatDinamis(waktuAbsen: Date): { status: 'normal' | 'terlambat'; menit: number } {
+    if (!jamKantor) return { status: 'normal', menit: 0 }
+
+    const wita = waktuAbsen.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit', hour12: false })
+    const [h, m] = wita.split('.').map(Number)
+    const menitSekarang = h * 60 + m
+
+    const [jamSH, jamSM] = jamKantor.jam_istirahat_selesai.split(':').map(Number)
+    const menitBatas = jamSH * 60 + jamSM
+
+    const diff = menitSekarang - menitBatas
+    return { status: diff > 0 ? 'terlambat' : 'normal', menit: diff > 0 ? diff : 0 }
+  }
+
   async function handleAbsen(tipe: TipeAbsen, isTerlambat = false) {
-    if (!user) return
+    if (!user || !jamKantor) {
+      alert('Jam kantor belum dimuat. Coba refresh halaman.')
+      return
+    }
     setLoading(true)
     setMessage('')
 
@@ -131,11 +229,11 @@ export default function AbsenPage() {
         return
       }
 
-      const { status, menitCepat } = cekStatusKeluar(new Date())
+      const { status, menitCepat } = cekStatusKeluarDinamis()
 
       if (status === 'lewat_batas') {
         setMessage(
-          `⚠️ Sudah lewat jam operasional (${JAM_KANTOR.JAM_KELUAR_BATAS} WITA). ` +
+          `⚠️ Sudah lewat jam operasional (batas: ${jamKantor.jam_pulang} + 4 jam). ` +
           `Silakan absen keluar besok (Absen Menyusul).`
         )
         setLoading(false)
@@ -144,7 +242,7 @@ export default function AbsenPage() {
 
       if (status === 'pulang_cepat') {
         const konfirmasi = confirm(
-          `⏰ Anda akan absen keluar sebelum jam ${JAM_KANTOR.JAM_KELUAR_MULAI} WITA.\n\n` +
+          `⏰ Anda akan absen keluar sebelum jam ${jamKantor.jam_pulang} WITA.\n\n` +
           `Status akan tercatat "Pulang Cepat" (${menitCepat} menit lebih awal).\n\n` +
           `Yakin ingin melanjutkan?`
         )
@@ -169,6 +267,14 @@ export default function AbsenPage() {
       console.warn('GPS error:', err)
     }
 
+    // Snapshot jam kantor saat ini untuk disimpan di log
+    const snapshotJamKantor = {
+      jam_masuk: jamKantor.jam_masuk,
+      jam_pulang: jamKantor.jam_pulang,
+      jam_istirahat_mulai: jamKantor.jam_istirahat_mulai,
+      jam_istirahat_selesai: jamKantor.jam_istirahat_selesai,
+    }
+
     const { error } = await supabase.from('attendance_logs').insert({
       user_id: user.id,
       tipe,
@@ -177,6 +283,7 @@ export default function AbsenPage() {
       longitude: lng,
       accuracy: acc,
       is_terlambat: isTerlambat,
+      jam_kantor_saat_absen: snapshotJamKantor,
     })
 
     if (error) {
@@ -185,28 +292,28 @@ export default function AbsenPage() {
       if (isTerlambat) {
         setMessage('✅ Absen keluar (terlambat) tercatat. Sekarang Anda bisa absen masuk.')
       } else if (tipe === 'masuk') {
-        const { terlambat, menit } = cekTerlambatMasuk(new Date())
+        const { terlambat, menit } = cekTerlambatMasukDinamis(jamKantor.jam_masuk)
         if (terlambat) {
-          setMessage(`✅ Absen masuk berhasil! ⚠️ Anda terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_MASUK_BATAS}.`)
+          setMessage(`✅ Absen masuk berhasil! ⚠️ Anda terlambat ${menit} menit dari jam ${jamKantor.jam_masuk}.`)
         } else {
           setMessage(`✅ Absen masuk berhasil! ${lat ? '📍 Lokasi tercatat.' : ''}`)
         }
       } else if (tipe === 'istirahat_mulai') {
-        const { status, menit } = cekStatusIstirahat(new Date())
+        const { status, menit } = cekStatusIstirahatDinamis(new Date())
         if (status === 'terlambat') {
-          setMessage(`✅ Istirahat mulai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_ISTIRAHAT_SELESAI}.`)
+          setMessage(`✅ Istirahat mulai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${jamKantor.jam_istirahat_selesai}.`)
         } else {
           setMessage(`✅ Istirahat mulai tercatat. Selamat istirahat! ☕`)
         }
       } else if (tipe === 'istirahat_selesai') {
-        const { status, menit } = cekStatusIstirahat(new Date())
+        const { status, menit } = cekStatusIstirahatDinamis(new Date())
         if (status === 'terlambat') {
-          setMessage(`✅ Istirahat selesai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${JAM_KANTOR.JAM_ISTIRAHAT_SELESAI}.`)
+          setMessage(`✅ Istirahat selesai tercatat! ⚠️ Terlambat ${menit} menit dari jam ${jamKantor.jam_istirahat_selesai}.`)
         } else {
           setMessage(`✅ Istirahat selesai. Selamat bekerja kembali! 💪`)
         }
       } else {
-        const { status, menitCepat } = cekStatusKeluar(new Date())
+        const { status, menitCepat } = cekStatusKeluarDinamis()
         if (status === 'pulang_cepat') {
           setMessage(`✅ Absen keluar berhasil! ⚠️ Anda pulang ${menitCepat} menit lebih awal.`)
         } else {
@@ -219,7 +326,7 @@ export default function AbsenPage() {
     setTimeout(() => setMessage(''), 7000)
   }
 
-  if (!user) {
+  if (!user || !jamKantor) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
@@ -230,13 +337,13 @@ export default function AbsenPage() {
     )
   }
 
-  const jamMasuk = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
-  const jamKeluar = todayLogs.find((l) => l.tipe === 'keluar' && !l.is_terlambat)
+  const jamMasukLog = todayLogs.find((l) => l.tipe === 'masuk' && !l.is_terlambat)
+  const jamKeluarLog = todayLogs.find((l) => l.tipe === 'keluar' && !l.is_terlambat)
   const istirahatMulai = todayLogs.find((l) => l.tipe === 'istirahat_mulai')
   const istirahatSelesai = todayLogs.find((l) => l.tipe === 'istirahat_selesai')
 
-  const sudahMasuk = !!jamMasuk
-  const sudahKeluar = !!jamKeluar
+  const sudahMasuk = !!jamMasukLog
+  const sudahKeluar = !!jamKeluarLog
   const sedangIstirahat = !!istirahatMulai && !istirahatSelesai
   const sudahIstirahat = !!istirahatMulai && !!istirahatSelesai
 
@@ -246,10 +353,10 @@ export default function AbsenPage() {
     (istirahatSelesai ? 25 : 0) +
     (sudahKeluar ? 25 : 0)
 
-  const ketMasuk = getKeteranganMasuk(jamMasuk || null)
-  const ketKeluar = getKeteranganKeluar(jamKeluar || null)
-  const ketIstirahatMulai = istirahatMulai ? cekStatusIstirahat(new Date(istirahatMulai.waktu_absen)) : null
-  const ketIstirahatSelesai = istirahatSelesai ? cekStatusIstirahat(new Date(istirahatSelesai.waktu_absen)) : null
+  const ketMasuk = getKeteranganMasuk(jamMasukLog || null)
+  const ketKeluar = getKeteranganKeluar(jamKeluarLog || null)
+  const ketIstirahatMulai = istirahatMulai ? cekStatusIstirahatDinamis(new Date(istirahatMulai.waktu_absen)) : null
+  const ketIstirahatSelesai = istirahatSelesai ? cekStatusIstirahatDinamis(new Date(istirahatSelesai.waktu_absen)) : null
 
   const getTipeLabel = (tipe: TipeAbsen) => {
     switch (tipe) {
@@ -284,7 +391,6 @@ export default function AbsenPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Tombol Ajukan Izin */}
             <Link
               href="/izin"
               className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
@@ -299,7 +405,6 @@ export default function AbsenPage() {
               )}
             </Link>
 
-            {/* TOMBOL BARU: JADWAL SAYA */}
             <Link
               href="/jadwal-saya"
               className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
@@ -387,7 +492,7 @@ export default function AbsenPage() {
           )}
         </Link>
 
-        {/* Info Jam */}
+        {/* Info Jam (dinamis dari history) */}
         <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
@@ -395,16 +500,16 @@ export default function AbsenPage() {
             </div>
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Kantor</p>
-                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_KANTOR}</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Masuk</p>
+                <p className="text-xs font-bold text-slate-800">{jamKantor.jam_masuk} WITA</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pelayanan</p>
-                <p className="text-xs font-bold text-slate-800">{LABEL_JAM.JAM_PELAYANAN}</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pulang</p>
+                <p className="text-xs font-bold text-slate-800">{jamKantor.jam_pulang} WITA</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Istirahat</p>
-                <p className="text-xs font-bold text-amber-700">{LABEL_JAM.JAM_ISTIRAHAT}</p>
+                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Istirahat</p>
+                <p className="text-xs font-bold text-amber-700">{jamKantor.jam_istirahat_mulai} – {jamKantor.jam_istirahat_selesai}</p>
               </div>
             </div>
           </div>
@@ -540,7 +645,7 @@ export default function AbsenPage() {
               )}
               {sudahMasuk && !sudahIstirahat && !sedangIstirahat && (
                 <p className="text-xs text-amber-600 text-center font-medium">
-                  ☕ Jangan lupa istirahat jam {LABEL_JAM.JAM_ISTIRAHAT} WITA
+                  ☕ Jangan lupa istirahat jam {jamKantor.jam_istirahat_mulai} WITA
                 </p>
               )}
             </div>
@@ -573,7 +678,7 @@ export default function AbsenPage() {
               <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
             </div>
             <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
-              {jamMasuk ? new Date(jamMasuk.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              {jamMasukLog ? new Date(jamMasukLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketMasuk && (
               <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
@@ -628,7 +733,7 @@ export default function AbsenPage() {
               <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
             </div>
             <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
-              {jamKeluar ? new Date(jamKeluar.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+              {jamKeluarLog ? new Date(jamKeluarLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketKeluar && (
               <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600' : 'text-orange-600'}`}>
@@ -662,7 +767,7 @@ export default function AbsenPage() {
                 const info = getTipeLabel(log.tipe)
                 const ket = log.tipe === 'masuk' ? getKeteranganMasuk(log) :
                             log.tipe === 'keluar' ? getKeteranganKeluar(log) :
-                            cekStatusIstirahat(new Date(log.waktu_absen))
+                            cekStatusIstirahatDinamis(new Date(log.waktu_absen))
 
                 return (
                   <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
