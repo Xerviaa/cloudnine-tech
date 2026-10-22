@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import AvatarDropdown from '@/components/AvatarDropdown'
 import { LABEL_JAM } from '@/lib/config/jam-kantor'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
+// 1. TAMBAHKAN IMPORT INI
+import ThemeToggle from '@/components/ThemeToggle'
 
 type TipeAbsen = 'masuk' | 'keluar' | 'istirahat_mulai' | 'istirahat_selesai'
 
@@ -57,18 +59,13 @@ export default function AbsenPage() {
         .from('profiles').select('*').eq('id', user.id).single()
       setProfile(profileData)
 
-      // Ambil jam kantor yang berlaku hari ini
       await loadJamKantorHariIni()
-
       await loadData(user.id)
       await loadPendingLeave(user.id)
     }
     loadUser()
   }, [])
 
-  // ============================================================
-  // Ambil jam kantor dari HISTORY (sesuai tanggal hari ini)
-  // ============================================================
   async function loadJamKantorHariIni() {
     const today = new Date()
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -84,7 +81,6 @@ export default function AbsenPage() {
     if (data) {
       setJamKantor(data as JamKantorAktif)
     } else {
-      // Fallback dari company_settings
       const { data: current } = await supabase
         .from('company_settings')
         .select('jam_masuk, jam_pulang, jam_istirahat_mulai, jam_istirahat_selesai')
@@ -151,9 +147,6 @@ export default function AbsenPage() {
     })
   }
 
-  // ============================================================
-  // Cek keterlambatan berdasarkan jam kantor yang AKTIF hari ini
-  // ============================================================
   function cekTerlambatMasukDinamis(jamMasukStr: string): { terlambat: boolean; menit: number } {
     if (!jamKantor) return { terlambat: false, menit: 0 }
 
@@ -180,7 +173,6 @@ export default function AbsenPage() {
     const [jamPH, jamPM] = jamKantor.jam_pulang.split(':').map(Number)
     const menitPulang = jamPH * 60 + jamPM
 
-    // Batas maksimal pulang = jam pulang + 4 jam (misal 16:30 + 4 = 20:30)
     const batasMaksimal = menitPulang + (4 * 60)
 
     if (menitSekarang > batasMaksimal) {
@@ -267,7 +259,6 @@ export default function AbsenPage() {
       console.warn('GPS error:', err)
     }
 
-    // Snapshot jam kantor saat ini untuk disimpan di log
     const snapshotJamKantor = {
       jam_masuk: jamKantor.jam_masuk,
       jam_pulang: jamKantor.jam_pulang,
@@ -328,10 +319,10 @@ export default function AbsenPage() {
 
   if (!user || !jamKantor) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors">
         <div className="flex flex-col items-center gap-3">
           <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <p className="text-slate-500 text-sm">Memuat data...</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data...</p>
         </div>
       </main>
     )
@@ -360,22 +351,22 @@ export default function AbsenPage() {
 
   const getTipeLabel = (tipe: TipeAbsen) => {
     switch (tipe) {
-      case 'masuk': return { label: 'Masuk', color: 'text-emerald-600', bg: 'from-emerald-400 to-teal-400', icon: '→' }
-      case 'keluar': return { label: 'Keluar', color: 'text-rose-500', bg: 'from-rose-400 to-pink-400', icon: '←' }
-      case 'istirahat_mulai': return { label: 'Istirahat Mulai', color: 'text-amber-600', bg: 'from-amber-400 to-orange-400', icon: '☕' }
-      case 'istirahat_selesai': return { label: 'Istirahat Selesai', color: 'text-blue-600', bg: 'from-blue-400 to-indigo-400', icon: '💪' }
+      case 'masuk': return { label: 'Masuk', color: 'text-emerald-600 dark:text-emerald-400', bg: 'from-emerald-400 to-teal-400', icon: '→' }
+      case 'keluar': return { label: 'Keluar', color: 'text-rose-500 dark:text-rose-400', bg: 'from-rose-400 to-pink-400', icon: '←' }
+      case 'istirahat_mulai': return { label: 'Istirahat Mulai', color: 'text-amber-600 dark:text-amber-400', bg: 'from-amber-400 to-orange-400', icon: '☕' }
+      case 'istirahat_selesai': return { label: 'Istirahat Selesai', color: 'text-blue-600 dark:text-blue-400', bg: 'from-blue-400 to-indigo-400', icon: '💪' }
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 relative overflow-hidden">
+    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden transition-colors">
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 rounded-full blur-3xl" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-3xl transition-colors" />
+        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 dark:bg-violet-900/20 rounded-full blur-3xl transition-colors" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl transition-colors" />
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 border-b border-slate-200/60 shadow-sm">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 shadow-sm transition-colors">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -385,8 +376,8 @@ export default function AbsenPage() {
               </div>
             </div>
             <div>
-              <p className="text-slate-800 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 text-xs">Halaman Absen</p>
+              <p className="text-slate-800 dark:text-slate-100 font-bold text-lg leading-tight">AbsenKita</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs">Halaman Absen</p>
             </div>
           </div>
 
@@ -414,8 +405,11 @@ export default function AbsenPage() {
               <span className="sm:hidden">Jadwal</span>
             </Link>
 
+            {/* 2. TOMBOL DARK MODE DISISIPKAN DI SINI */}
+            <ThemeToggle />
+
             {profile?.role === 'admin' && (
-              <a href="/admin" className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-3 py-2 rounded-lg transition font-medium">
+              <a href="/admin" className="text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-lg transition font-medium">
                 Admin
               </a>
             )}
@@ -493,23 +487,23 @@ export default function AbsenPage() {
         </Link>
 
         {/* Info Jam (dinamis dari history) */}
-        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 rounded-2xl p-4 mb-6">
+        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-200 dark:border-slate-700 rounded-2xl p-4 mb-6 transition-colors">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
               ⏰
             </div>
             <div className="flex-1 grid grid-cols-3 gap-2">
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Masuk</p>
-                <p className="text-xs font-bold text-slate-800">{jamKantor.jam_masuk} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Masuk</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_masuk} WITA</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Jam Pulang</p>
-                <p className="text-xs font-bold text-slate-800">{jamKantor.jam_pulang} WITA</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Pulang</p>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_pulang} WITA</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-slate-500 mb-0.5">Istirahat</p>
-                <p className="text-xs font-bold text-amber-700">{jamKantor.jam_istirahat_mulai} – {jamKantor.jam_istirahat_selesai}</p>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Istirahat</p>
+                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{jamKantor.jam_istirahat_mulai} – {jamKantor.jam_istirahat_selesai}</p>
               </div>
             </div>
           </div>
@@ -517,15 +511,15 @@ export default function AbsenPage() {
 
         {/* Peringatan Pending */}
         {pendingLog && (
-          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 mb-6 shadow-md">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 mb-6 shadow-md transition-colors">
             <div className="flex items-start gap-3">
               <span className="text-3xl">⚠️</span>
               <div className="flex-1">
-                <p className="font-bold text-amber-800">Anda Lupa Absen Keluar!</p>
-                <p className="text-sm text-amber-700 mt-1">
+                <p className="font-bold text-amber-800 dark:text-amber-400">Anda Lupa Absen Keluar!</p>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                   Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Makassar' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}</strong> belum ada absen keluar.
                 </p>
-                <p className="text-sm text-amber-700 mt-1">
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
                   Silakan lakukan absen keluar (terlambat) dulu untuk bisa absen masuk hari ini.
                 </p>
               </div>
@@ -534,8 +528,8 @@ export default function AbsenPage() {
         )}
 
         {/* Tombol Absen */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h2 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+          <h2 className="text-slate-800 dark:text-slate-100 font-bold mb-4 flex items-center gap-2">
             <span>📋</span> Absensi Hari Ini
           </h2>
 
@@ -559,7 +553,7 @@ export default function AbsenPage() {
                   disabled={loading || sudahMasuk}
                   className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                     sudahMasuk
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
                       : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
@@ -579,7 +573,7 @@ export default function AbsenPage() {
                   disabled={loading || !sudahMasuk || sudahIstirahat || sedangIstirahat}
                   className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                     !sudahMasuk || sudahIstirahat || sedangIstirahat
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
                       : 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg shadow-amber-400/30 hover:shadow-xl hover:shadow-amber-400/40 hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
@@ -601,7 +595,7 @@ export default function AbsenPage() {
                   disabled={loading || !sedangIstirahat}
                   className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                     !sedangIstirahat
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
                       : 'bg-gradient-to-r from-blue-400 to-indigo-400 text-white shadow-lg shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40 hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
@@ -621,7 +615,7 @@ export default function AbsenPage() {
                   disabled={loading || sudahKeluar || !sudahMasuk || sedangIstirahat}
                   className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
                     sudahKeluar || !sudahMasuk || sedangIstirahat
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
                       : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
                   }`}
                 >
@@ -639,12 +633,12 @@ export default function AbsenPage() {
               </div>
 
               {!sudahMasuk && (
-                <p className="text-xs text-slate-500 text-center">
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
                   💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
                 </p>
               )}
               {sudahMasuk && !sudahIstirahat && !sedangIstirahat && (
-                <p className="text-xs text-amber-600 text-center font-medium">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium">
                   ☕ Jangan lupa istirahat jam {jamKantor.jam_istirahat_mulai} WITA
                 </p>
               )}
@@ -654,10 +648,10 @@ export default function AbsenPage() {
           {message && (
             <div className={`mt-4 text-sm text-center p-3 rounded-xl font-medium border ${
               message.includes('berhasil') || message.includes('tercatat')
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                 : message.includes('sudah') || message.includes('Mengambil') || message.includes('istirahat')
-                ? 'bg-amber-50 text-amber-700 border-amber-200'
-                : 'bg-rose-50 text-rose-700 border-rose-200'
+                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+                : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
             }`}>
               {message}
             </div>
@@ -666,77 +660,77 @@ export default function AbsenPage() {
 
         {/* Kartu Ringkasan */}
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200' : 'border-slate-200'}`}>
+          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200 dark:border-emerald-800' : 'border-slate-200 dark:border-slate-700'}`}>
             <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahMasuk ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-slate-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahMasuk ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahMasuk ? 'text-white' : 'text-slate-400'}>
                   <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
                   <polyline points="10 17 15 12 10 7"/>
                   <line x1="15" x2="3" y1="12" y2="12"/>
                 </svg>
               </div>
-              <p className="text-xs font-semibold text-slate-600">Jam Masuk</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Masuk</p>
             </div>
-            <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300'}`}>
+            <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
               {jamMasukLog ? new Date(jamMasukLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketMasuk && (
-              <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {ketMasuk.detail}
               </p>
             )}
           </div>
 
-          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${istirahatMulai ? 'border-amber-200' : 'border-slate-200'}`}>
+          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatMulai ? 'border-amber-200 dark:border-amber-800' : 'border-slate-200 dark:border-slate-700'}`}>
             <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatMulai ? 'bg-gradient-to-br from-amber-400 to-orange-400' : 'bg-slate-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatMulai ? 'bg-gradient-to-br from-amber-400 to-orange-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
                 <span className="text-base">☕</span>
               </div>
-              <p className="text-xs font-semibold text-slate-600">Istirahat</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Istirahat</p>
             </div>
-            <p className={`text-xl font-bold font-mono ${istirahatMulai ? 'text-amber-500' : 'text-slate-300'}`}>
+            <p className={`text-xl font-bold font-mono ${istirahatMulai ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}`}>
               {istirahatMulai ? new Date(istirahatMulai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketIstirahatMulai && (
-              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatMulai.status === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatMulai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {ketIstirahatMulai.status === 'terlambat' ? `Terlambat ${ketIstirahatMulai.menit} menit` : 'Tepat waktu'}
               </p>
             )}
           </div>
 
-          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${istirahatSelesai ? 'border-blue-200' : 'border-slate-200'}`}>
+          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatSelesai ? 'border-blue-200 dark:border-blue-800' : 'border-slate-200 dark:border-slate-700'}`}>
             <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatSelesai ? 'bg-gradient-to-br from-blue-400 to-indigo-400' : 'bg-slate-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatSelesai ? 'bg-gradient-to-br from-blue-400 to-indigo-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
                 <span className="text-base">💪</span>
               </div>
-              <p className="text-xs font-semibold text-slate-600">Selesai Istirahat</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selesai Istirahat</p>
             </div>
-            <p className={`text-xl font-bold font-mono ${istirahatSelesai ? 'text-blue-500' : 'text-slate-300'}`}>
+            <p className={`text-xl font-bold font-mono ${istirahatSelesai ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`}>
               {istirahatSelesai ? new Date(istirahatSelesai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketIstirahatSelesai && (
-              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatSelesai.status === 'terlambat' ? 'text-amber-600' : 'text-emerald-600'}`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatSelesai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {ketIstirahatSelesai.status === 'terlambat' ? `Terlambat ${ketIstirahatSelesai.menit} menit` : 'Tepat waktu'}
               </p>
             )}
           </div>
 
-          <div className={`bg-white border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200' : 'border-slate-200'}`}>
+          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'}`}>
             <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahKeluar ? 'bg-gradient-to-br from-rose-400 to-pink-400' : 'bg-slate-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahKeluar ? 'bg-gradient-to-br from-rose-400 to-pink-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahKeluar ? 'text-white' : 'text-slate-400'}>
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                   <polyline points="16 17 21 12 16 7"/>
                   <line x1="21" x2="9" y1="12" y2="12"/>
                 </svg>
               </div>
-              <p className="text-xs font-semibold text-slate-600">Jam Keluar</p>
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Keluar</p>
             </div>
-            <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300'}`}>
+            <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
               {jamKeluarLog ? new Date(jamKeluarLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
             </p>
             {ketKeluar && (
-              <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600' : 'text-orange-600'}`}>
+              <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
                 {ketKeluar.detail}
               </p>
             )}
@@ -744,13 +738,13 @@ export default function AbsenPage() {
         </div>
 
         {/* Riwayat */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-slate-800 font-bold flex items-center gap-2">
+            <h2 className="text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2">
               <span>🕐</span> Riwayat Hari Ini
             </h2>
             {todayLogs.length > 0 && (
-              <span className="text-xs bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1 rounded-full font-medium">
+              <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-full font-medium transition-colors">
                 {todayLogs.length} catatan
               </span>
             )}
@@ -759,7 +753,7 @@ export default function AbsenPage() {
           {todayLogs.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-5xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 text-sm font-medium">Belum ada absensi hari ini</p>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada absensi hari ini</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -770,7 +764,7 @@ export default function AbsenPage() {
                             cekStatusIstirahatDinamis(new Date(log.waktu_absen))
 
                 return (
-                  <div key={log.id} className="bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl p-4 transition">
+                  <div key={log.id} className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 transition">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br ${info.bg}`}>
@@ -780,26 +774,26 @@ export default function AbsenPage() {
                           <p className={`font-semibold text-sm ${info.color}`}>
                             {info.label}
                             {log.is_terlambat && (
-                              <span className="ml-2 text-[10px] bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
+                              <span className="ml-2 text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full font-bold transition-colors">
                                 MENYUSUL
                               </span>
                             )}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
                             {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' })}
                           </p>
                           {ket && 'detail' in ket && (
                             <p className={`text-[10px] mt-0.5 font-medium ${
-                              ket.warna === 'terlambat' ? 'text-amber-600'
-                              : ket.warna === 'pulang_cepat' ? 'text-orange-600'
-                              : ket.warna === 'menyusul' ? 'text-amber-600'
-                              : 'text-emerald-600'
+                              ket.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400'
+                              : ket.warna === 'pulang_cepat' ? 'text-orange-600 dark:text-orange-400'
+                              : ket.warna === 'menyusul' ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-emerald-600 dark:text-emerald-400'
                             }`}>
                               {ket.detail}
                             </p>
                           )}
                           {ket && 'status' in ket && ket.status === 'terlambat' && (
-                            <p className="text-[10px] mt-0.5 font-medium text-amber-600">
+                            <p className="text-[10px] mt-0.5 font-medium text-amber-600 dark:text-amber-400">
                               Terlambat {ket.menit} menit
                             </p>
                           )}
