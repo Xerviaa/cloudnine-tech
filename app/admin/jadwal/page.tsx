@@ -27,6 +27,9 @@ export default function AdminJadwalPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [saving, setSaving] = useState(false)
 
+  // NOTIFIKASI TUKAR LIBUR
+  const [pendingSwapCount, setPendingSwapCount] = useState(0)
+
   // Filter bulan
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date()
@@ -57,14 +60,19 @@ export default function AdminJadwalPage() {
       }
       setProfile(profileData)
 
-      // ============================================================
-      // FIX: Load SEMUA karyawan (termasuk admin) tanpa filter
-      // ============================================================
+      // Load SEMUA karyawan (termasuk admin)
       const { data: empData } = await supabase
         .from('profiles')
         .select('*')
         .order('nama_lengkap')
       setEmployees(empData || [])
+
+      // Cek jumlah pengajuan tukar libur pending
+      const { count: swapCount } = await supabase
+        .from('shift_swap_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+      setPendingSwapCount(swapCount || 0)
 
       await loadSchedules()
       setLoading(false)
@@ -249,12 +257,28 @@ export default function AdminJadwalPage() {
             </div>
           </Link>
 
-          <Link
-            href="/admin"
-            className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
-          >
-            ← Kembali
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* TOMBOL TUKAR LIBUR - PINDAH KE SINI */}
+            <Link
+              href="/admin/tukar-libur"
+              className="relative text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+            >
+              <span>🔄</span>
+              <span className="hidden sm:inline">Tukar Libur</span>
+              {pendingSwapCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md animate-pulse">
+                  {pendingSwapCount > 99 ? '99+' : pendingSwapCount}
+                </span>
+              )}
+            </Link>
+
+            <Link
+              href="/admin"
+              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium"
+            >
+              ← Kembali
+            </Link>
+          </div>
         </div>
       </header>
 
