@@ -4,11 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import AvatarDropdown from '@/components/AvatarDropdown'
 import { LABEL_JAM } from '@/lib/config/jam-kantor'
 import { getKeteranganMasuk, getKeteranganKeluar } from '@/lib/utils/attendance'
-// 1. TAMBAHKAN IMPORT INI
-import ThemeToggle from '@/components/ThemeToggle'
 
 type TipeAbsen = 'masuk' | 'keluar' | 'istirahat_mulai' | 'istirahat_selesai'
 
@@ -319,12 +316,12 @@ export default function AbsenPage() {
 
   if (!user || !jamKantor) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 transition-colors">
+      <div className="flex items-center justify-center py-32">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-indigo-200 dark:border-slate-700 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin" />
           <p className="text-slate-500 dark:text-slate-400 text-sm">Memuat data...</p>
         </div>
-      </main>
+      </div>
     )
   }
 
@@ -359,457 +356,392 @@ export default function AbsenPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 dark:bg-slate-900 relative overflow-hidden transition-colors">
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-indigo-200/40 dark:bg-indigo-900/20 rounded-full blur-3xl transition-colors" />
-        <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-violet-200/40 dark:bg-violet-900/20 rounded-full blur-3xl transition-colors" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-200/30 dark:bg-blue-900/20 rounded-full blur-3xl transition-colors" />
+    <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
+      {/* Kartu Jam */}
+      <div className="relative group mb-6">
+        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-40 transition" />
+        <div className="relative bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 rounded-3xl p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur border border-white/30 rounded-full px-3 py-1 mb-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+              <span className="text-white text-xs font-medium">Live</span>
+            </div>
+            <p className="text-white/90 text-sm mb-1">
+              Halo, <span className="text-white font-semibold">{profile?.nama_lengkap}</span> 👋
+            </p>
+            <p className="text-white/70 text-xs mb-6">Waktu saat ini (WITA)</p>
+            <div className="text-6xl md:text-7xl font-bold font-mono tracking-tight text-white tabular-nums drop-shadow-lg">
+              {now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}
+            </div>
+            <p className="text-white/80 text-sm mt-4">
+              {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Makassar' })}
+            </p>
+            <div className="mt-6 max-w-xs mx-auto">
+              <div className="flex justify-between text-xs text-white/80 mb-2">
+                <span>Progres Hari Ini</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-slate-900/80 border-b border-slate-200/60 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl blur-md opacity-50" />
-              <div className="relative w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl">🏢</span>
-              </div>
+      {/* Banner Ajukan Izin */}
+      <Link
+        href="/izin"
+        className="block mb-6 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-2xl p-5 shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:-translate-y-1 relative overflow-hidden group"
+      >
+        <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition" />
+        <div className="relative flex items-center gap-4">
+          <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl shadow-lg shrink-0">
+            📝
+          </div>
+          <div className="flex-1">
+            <p className="text-white font-bold text-base leading-tight">
+              Butuh Izin, Sakit, atau Cuti?
+            </p>
+            <p className="text-white/80 text-xs mt-0.5">
+              Ajukan di sini, admin akan memproses pengajuan Anda
+            </p>
+          </div>
+          <div className="hidden sm:flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur rounded-full text-white text-xl group-hover:translate-x-1 transition">
+            →
+          </div>
+        </div>
+        {pendingLeaveCount > 0 && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-amber-900 animate-pulse" />
+            Anda punya {pendingLeaveCount} pengajuan yang menunggu
+          </div>
+        )}
+      </Link>
+
+      {/* Info Jam (dinamis dari history) */}
+      <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-200 dark:border-slate-700 rounded-2xl p-4 mb-6 transition-colors">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
+            ⏰
+          </div>
+          <div className="flex-1 grid grid-cols-3 gap-2">
+            <div>
+              <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Masuk</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_masuk} WITA</p>
             </div>
             <div>
-              <p className="text-slate-800 dark:text-slate-100 font-bold text-lg leading-tight">AbsenKita</p>
-              <p className="text-slate-500 dark:text-slate-400 text-xs">Halaman Absen</p>
+              <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Pulang</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_pulang} WITA</p>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/izin"
-              className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-indigo-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
-            >
-              <span>📝</span>
-              <span className="hidden sm:inline">Ajukan Izin</span>
-              <span className="sm:hidden">Izin</span>
-              {pendingLeaveCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-400 text-amber-900 text-[10px] font-bold rounded-full flex items-center justify-center border border-white">
-                  {pendingLeaveCount > 9 ? '9+' : pendingLeaveCount}
-                </span>
-              )}
-            </Link>
-
-            <Link
-              href="/jadwal-saya"
-              className="relative text-white text-xs sm:text-sm bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 border-0 px-3 sm:px-4 py-2 rounded-lg transition font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl inline-flex items-center gap-1.5"
-            >
-              <span>📅</span>
-              <span className="hidden sm:inline">Jadwal Saya</span>
-              <span className="sm:hidden">Jadwal</span>
-            </Link>
-
-            {/* 2. TOMBOL DARK MODE DISISIPKAN DI SINI */}
-            <ThemeToggle />
-
-            {profile?.role === 'admin' && (
-              <a href="/admin" className="text-slate-700 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-indigo-400 text-sm bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-3 py-2 rounded-lg transition font-medium">
-                Admin
-              </a>
-            )}
-            <AvatarDropdown
-              nama={profile?.nama_lengkap || 'User'}
-              email={profile?.email || ''}
-              role={profile?.role || 'karyawan'}
-              avatarUrl={profile?.avatar_url || null}
-            />
-          </div>
-        </div>
-      </header>
-
-      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
-        {/* Kartu Jam */}
-        <div className="relative group mb-6">
-          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-3xl blur-xl opacity-30 group-hover:opacity-40 transition" />
-          <div className="relative bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-600 rounded-3xl p-8 shadow-2xl">
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur border border-white/30 rounded-full px-3 py-1 mb-4">
-                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-                <span className="text-white text-xs font-medium">Live</span>
-              </div>
-              <p className="text-white/90 text-sm mb-1">
-                Halo, <span className="text-white font-semibold">{profile?.nama_lengkap}</span> 👋
-              </p>
-              <p className="text-white/70 text-xs mb-6">Waktu saat ini (WITA)</p>
-              <div className="text-6xl md:text-7xl font-bold font-mono tracking-tight text-white tabular-nums drop-shadow-lg">
-                {now.toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}
-              </div>
-              <p className="text-white/80 text-sm mt-4">
-                {now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Makassar' })}
-              </p>
-              <div className="mt-6 max-w-xs mx-auto">
-                <div className="flex justify-between text-xs text-white/80 mb-2">
-                  <span>Progres Hari Ini</span>
-                  <span>{progress}%</span>
-                </div>
-                <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-300 to-teal-300 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
-                </div>
-              </div>
+            <div>
+              <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Istirahat</p>
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{jamKantor.jam_istirahat_mulai} – {jamKantor.jam_istirahat_selesai}</p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Banner Ajukan Izin */}
-        <Link
-          href="/izin"
-          className="block mb-6 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 rounded-2xl p-5 shadow-xl shadow-indigo-500/25 hover:shadow-2xl hover:shadow-indigo-500/40 transition-all hover:-translate-y-1 relative overflow-hidden group"
-        >
-          <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition" />
-          <div className="relative flex items-center gap-4">
-            <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-3xl shadow-lg shrink-0">
-              📝
-            </div>
-            <div className="flex-1">
-              <p className="text-white font-bold text-base leading-tight">
-                Butuh Izin, Sakit, atau Cuti?
-              </p>
-              <p className="text-white/80 text-xs mt-0.5">
-                Ajukan di sini, admin akan memproses pengajuan Anda
-              </p>
-            </div>
-            <div className="hidden sm:flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur rounded-full text-white text-xl group-hover:translate-x-1 transition">
-              →
-            </div>
-          </div>
-          {pendingLeaveCount > 0 && (
-            <div className="mt-3 inline-flex items-center gap-2 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-amber-900 animate-pulse" />
-              Anda punya {pendingLeaveCount} pengajuan yang menunggu
-            </div>
-          )}
-        </Link>
-
-        {/* Info Jam (dinamis dari history) */}
-        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-200 dark:border-slate-700 rounded-2xl p-4 mb-6 transition-colors">
+      {/* Peringatan Pending */}
+      {pendingLog && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 mb-6 shadow-md transition-colors">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0">
-              ⏰
-            </div>
-            <div className="flex-1 grid grid-cols-3 gap-2">
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Masuk</p>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_masuk} WITA</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Jam Pulang</p>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{jamKantor.jam_pulang} WITA</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mb-0.5">Istirahat</p>
-                <p className="text-xs font-bold text-amber-700 dark:text-amber-400">{jamKantor.jam_istirahat_mulai} – {jamKantor.jam_istirahat_selesai}</p>
-              </div>
+            <span className="text-3xl">⚠️</span>
+            <div className="flex-1">
+              <p className="font-bold text-amber-800 dark:text-amber-400">Anda Lupa Absen Keluar!</p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Makassar' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}</strong> belum ada absen keluar.
+              </p>
+              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                Silakan lakukan absen keluar (terlambat) dulu untuk bisa absen masuk hari ini.
+              </p>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Peringatan Pending */}
-        {pendingLog && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-700 rounded-2xl p-5 mb-6 shadow-md transition-colors">
-            <div className="flex items-start gap-3">
-              <span className="text-3xl">⚠️</span>
-              <div className="flex-1">
-                <p className="font-bold text-amber-800 dark:text-amber-400">Anda Lupa Absen Keluar!</p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Absen masuk pada <strong>{new Date(pendingLog.waktu_absen).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Makassar' })}</strong> pukul <strong>{new Date(pendingLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar' })}</strong> belum ada absen keluar.
-                </p>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Silakan lakukan absen keluar (terlambat) dulu untuk bisa absen masuk hari ini.
-                </p>
-              </div>
+      {/* Tombol Absen */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+        <h2 className="text-slate-800 dark:text-slate-100 font-bold mb-4 flex items-center gap-2">
+          <span>📋</span> Absensi Hari Ini
+        </h2>
+
+        {pendingLog ? (
+          <button
+            onClick={() => handleAbsen('keluar', true)}
+            disabled={loading}
+            className="w-full py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Absen Keluar (Terlambat)
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                onClick={() => handleAbsen('masuk')}
+                disabled={loading || sudahMasuk}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  sudahMasuk
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
+                    : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sudahMasuk ? '✓ Sudah Masuk' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12l2 2 4-4"/>
+                      <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    Absen Masuk
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleAbsen('istirahat_mulai')}
+                disabled={loading || !sudahMasuk || sudahIstirahat || sedangIstirahat}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  !sudahMasuk || sudahIstirahat || sedangIstirahat
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
+                    : 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg shadow-amber-400/30 hover:shadow-xl hover:shadow-amber-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sedangIstirahat ? '☕ Sedang Istirahat' : sudahIstirahat ? '✓ Sudah Istirahat' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
+                      <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
+                    </svg>
+                    Istirahat Mulai
+                  </>
+                )}
+              </button>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                onClick={() => handleAbsen('istirahat_selesai')}
+                disabled={loading || !sedangIstirahat}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  !sedangIstirahat
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
+                    : 'bg-gradient-to-r from-blue-400 to-indigo-400 text-white shadow-lg shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sudahIstirahat ? '✓ Istirahat Selesai' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12l2 2 4-4"/>
+                      <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                    Selesai Istirahat
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleAbsen('keluar')}
+                disabled={loading || sudahKeluar || !sudahMasuk || sedangIstirahat}
+                className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  sudahKeluar || !sudahMasuk || sedangIstirahat
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
+                    : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
+                }`}
+              >
+                {sudahKeluar ? '✓ Sudah Keluar' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" x2="9" y1="12" y2="12"/>
+                    </svg>
+                    Absen Keluar
+                  </>
+                )}
+              </button>
+            </div>
+
+            {!sudahMasuk && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
+              </p>
+            )}
+            {sudahMasuk && !sudahIstirahat && !sedangIstirahat && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium">
+                ☕ Jangan lupa istirahat jam {jamKantor.jam_istirahat_mulai} WITA
+              </p>
+            )}
           </div>
         )}
 
-        {/* Tombol Absen */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
-          <h2 className="text-slate-800 dark:text-slate-100 font-bold mb-4 flex items-center gap-2">
-            <span>📋</span> Absensi Hari Ini
-          </h2>
+        {message && (
+          <div className={`mt-4 text-sm text-center p-3 rounded-xl font-medium border ${
+            message.includes('berhasil') || message.includes('tercatat')
+              ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+              : message.includes('sudah') || message.includes('Mengambil') || message.includes('istirahat')
+              ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
+              : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
+          }`}>
+            {message}
+          </div>
+        )}
+      </div>
 
-          {pendingLog ? (
-            <button
-              onClick={() => handleAbsen('keluar', true)}
-              disabled={loading}
-              className="w-full py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 16 14"/>
+      {/* Kartu Ringkasan */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200 dark:border-emerald-800' : 'border-slate-200 dark:border-slate-700'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahMasuk ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahMasuk ? 'text-white' : 'text-slate-400'}>
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" x2="3" y1="12" y2="12"/>
               </svg>
-              Absen Keluar (Terlambat)
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleAbsen('masuk')}
-                  disabled={loading || sudahMasuk}
-                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    sudahMasuk
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
-                      : 'bg-gradient-to-r from-emerald-400 to-teal-400 text-white shadow-lg shadow-emerald-400/30 hover:shadow-xl hover:shadow-emerald-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                  }`}
-                >
-                  {sudahMasuk ? '✓ Sudah Masuk' : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="10"/>
-                      </svg>
-                      Absen Masuk
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleAbsen('istirahat_mulai')}
-                  disabled={loading || !sudahMasuk || sudahIstirahat || sedangIstirahat}
-                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    !sudahMasuk || sudahIstirahat || sedangIstirahat
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
-                      : 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-lg shadow-amber-400/30 hover:shadow-xl hover:shadow-amber-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                  }`}
-                >
-                  {sedangIstirahat ? '☕ Sedang Istirahat' : sudahIstirahat ? '✓ Sudah Istirahat' : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M17 8h1a4 4 0 1 1 0 8h-1"/>
-                        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/>
-                      </svg>
-                      Istirahat Mulai
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button
-                  onClick={() => handleAbsen('istirahat_selesai')}
-                  disabled={loading || !sedangIstirahat}
-                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    !sedangIstirahat
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
-                      : 'bg-gradient-to-r from-blue-400 to-indigo-400 text-white shadow-lg shadow-blue-400/30 hover:shadow-xl hover:shadow-blue-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                  }`}
-                >
-                  {sudahIstirahat ? '✓ Istirahat Selesai' : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 12l2 2 4-4"/>
-                        <circle cx="12" cy="12" r="10"/>
-                      </svg>
-                      Selesai Istirahat
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => handleAbsen('keluar')}
-                  disabled={loading || sudahKeluar || !sudahMasuk || sedangIstirahat}
-                  className={`py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    sudahKeluar || !sudahMasuk || sedangIstirahat
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-600'
-                      : 'bg-gradient-to-r from-rose-400 to-pink-400 text-white shadow-lg shadow-rose-400/30 hover:shadow-xl hover:shadow-rose-400/40 hover:scale-[1.02] active:scale-[0.98]'
-                  }`}
-                >
-                  {sudahKeluar ? '✓ Sudah Keluar' : (
-                    <>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                        <polyline points="16 17 21 12 16 7"/>
-                        <line x1="21" x2="9" y1="12" y2="12"/>
-                      </svg>
-                      Absen Keluar
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {!sudahMasuk && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-                  💡 Lokasi Anda akan diambil otomatis saat klik tombol absen
-                </p>
-              )}
-              {sudahMasuk && !sudahIstirahat && !sedangIstirahat && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 text-center font-medium">
-                  ☕ Jangan lupa istirahat jam {jamKantor.jam_istirahat_mulai} WITA
-                </p>
-              )}
             </div>
-          )}
-
-          {message && (
-            <div className={`mt-4 text-sm text-center p-3 rounded-xl font-medium border ${
-              message.includes('berhasil') || message.includes('tercatat')
-                ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                : message.includes('sudah') || message.includes('Mengambil') || message.includes('istirahat')
-                ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-                : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800'
-            }`}>
-              {message}
-            </div>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Masuk</p>
+          </div>
+          <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
+            {jamMasukLog ? new Date(jamMasukLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </p>
+          {ketMasuk && (
+            <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {ketMasuk.detail}
+            </p>
           )}
         </div>
 
-        {/* Kartu Ringkasan */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahMasuk ? 'border-emerald-200 dark:border-emerald-800' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahMasuk ? 'bg-gradient-to-br from-emerald-400 to-teal-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahMasuk ? 'text-white' : 'text-slate-400'}>
-                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                  <polyline points="10 17 15 12 10 7"/>
-                  <line x1="15" x2="3" y1="12" y2="12"/>
-                </svg>
-              </div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Masuk</p>
+        <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatMulai ? 'border-amber-200 dark:border-amber-800' : 'border-slate-200 dark:border-slate-700'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatMulai ? 'bg-gradient-to-br from-amber-400 to-orange-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
+              <span className="text-base">☕</span>
             </div>
-            <p className={`text-xl font-bold font-mono ${sudahMasuk ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'}`}>
-              {jamMasukLog ? new Date(jamMasukLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            </p>
-            {ketMasuk && (
-              <p className={`text-[10px] mt-1 font-medium ${ketMasuk.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {ketMasuk.detail}
-              </p>
-            )}
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Istirahat</p>
           </div>
-
-          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatMulai ? 'border-amber-200 dark:border-amber-800' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatMulai ? 'bg-gradient-to-br from-amber-400 to-orange-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                <span className="text-base">☕</span>
-              </div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Istirahat</p>
-            </div>
-            <p className={`text-xl font-bold font-mono ${istirahatMulai ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}`}>
-              {istirahatMulai ? new Date(istirahatMulai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          <p className={`text-xl font-bold font-mono ${istirahatMulai ? 'text-amber-500' : 'text-slate-300 dark:text-slate-600'}`}>
+            {istirahatMulai ? new Date(istirahatMulai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </p>
+          {ketIstirahatMulai && (
+            <p className={`text-[10px] mt-1 font-medium ${ketIstirahatMulai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {ketIstirahatMulai.status === 'terlambat' ? `Terlambat ${ketIstirahatMulai.menit} menit` : 'Tepat waktu'}
             </p>
-            {ketIstirahatMulai && (
-              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatMulai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {ketIstirahatMulai.status === 'terlambat' ? `Terlambat ${ketIstirahatMulai.menit} menit` : 'Tepat waktu'}
-              </p>
-            )}
-          </div>
-
-          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatSelesai ? 'border-blue-200 dark:border-blue-800' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatSelesai ? 'bg-gradient-to-br from-blue-400 to-indigo-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                <span className="text-base">💪</span>
-              </div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selesai Istirahat</p>
-            </div>
-            <p className={`text-xl font-bold font-mono ${istirahatSelesai ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`}>
-              {istirahatSelesai ? new Date(istirahatSelesai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            </p>
-            {ketIstirahatSelesai && (
-              <p className={`text-[10px] mt-1 font-medium ${ketIstirahatSelesai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                {ketIstirahatSelesai.status === 'terlambat' ? `Terlambat ${ketIstirahatSelesai.menit} menit` : 'Tepat waktu'}
-              </p>
-            )}
-          </div>
-
-          <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahKeluar ? 'bg-gradient-to-br from-rose-400 to-pink-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahKeluar ? 'text-white' : 'text-slate-400'}>
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" x2="9" y1="12" y2="12"/>
-                </svg>
-              </div>
-              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Keluar</p>
-            </div>
-            <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
-              {jamKeluarLog ? new Date(jamKeluarLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
-            </p>
-            {ketKeluar && (
-              <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                {ketKeluar.detail}
-              </p>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Riwayat */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2">
-              <span>🕐</span> Riwayat Hari Ini
-            </h2>
-            {todayLogs.length > 0 && (
-              <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-full font-medium transition-colors">
-                {todayLogs.length} catatan
-              </span>
-            )}
+        <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${istirahatSelesai ? 'border-blue-200 dark:border-blue-800' : 'border-slate-200 dark:border-slate-700'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${istirahatSelesai ? 'bg-gradient-to-br from-blue-400 to-indigo-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
+              <span className="text-base">💪</span>
+            </div>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Selesai Istirahat</p>
           </div>
+          <p className={`text-xl font-bold font-mono ${istirahatSelesai ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`}>
+            {istirahatSelesai ? new Date(istirahatSelesai.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </p>
+          {ketIstirahatSelesai && (
+            <p className={`text-[10px] mt-1 font-medium ${ketIstirahatSelesai.status === 'terlambat' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+              {ketIstirahatSelesai.status === 'terlambat' ? `Terlambat ${ketIstirahatSelesai.menit} menit` : 'Tepat waktu'}
+            </p>
+          )}
+        </div>
 
-          {todayLogs.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-5xl mb-3 opacity-40">📭</p>
-              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada absensi hari ini</p>
+        <div className={`bg-white dark:bg-slate-800 border rounded-2xl p-5 transition shadow-sm ${sudahKeluar ? 'border-rose-200 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${sudahKeluar ? 'bg-gradient-to-br from-rose-400 to-pink-400' : 'bg-slate-100 dark:bg-slate-700'}`}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={sudahKeluar ? 'text-white' : 'text-slate-400'}>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" x2="9" y1="12" y2="12"/>
+              </svg>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {todayLogs.map((log) => {
-                const info = getTipeLabel(log.tipe)
-                const ket = log.tipe === 'masuk' ? getKeteranganMasuk(log) :
-                            log.tipe === 'keluar' ? getKeteranganKeluar(log) :
-                            cekStatusIstirahatDinamis(new Date(log.waktu_absen))
-
-                return (
-                  <div key={log.id} className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 transition">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br ${info.bg}`}>
-                          <span className="text-white font-bold text-lg">{info.icon}</span>
-                        </div>
-                        <div>
-                          <p className={`font-semibold text-sm ${info.color}`}>
-                            {info.label}
-                            {log.is_terlambat && (
-                              <span className="ml-2 text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full font-bold transition-colors">
-                                MENYUSUL
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
-                            {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' })}
-                          </p>
-                          {ket && 'detail' in ket && (
-                            <p className={`text-[10px] mt-0.5 font-medium ${
-                              ket.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400'
-                              : ket.warna === 'pulang_cepat' ? 'text-orange-600 dark:text-orange-400'
-                              : ket.warna === 'menyusul' ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-emerald-600 dark:text-emerald-400'
-                            }`}>
-                              {ket.detail}
-                            </p>
-                          )}
-                          {ket && 'status' in ket && ket.status === 'terlambat' && (
-                            <p className="text-[10px] mt-0.5 font-medium text-amber-600 dark:text-amber-400">
-                              Terlambat {ket.menit} menit
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <span className={`text-lg font-bold font-mono ${info.color}`}>
-                        {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' })}
-                      </span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Jam Keluar</p>
+          </div>
+          <p className={`text-xl font-bold font-mono ${sudahKeluar ? 'text-rose-500' : 'text-slate-300 dark:text-slate-600'}`}>
+            {jamKeluarLog ? new Date(jamKeluarLog.waktu_absen).toLocaleTimeString('id-ID', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' }) : '--:--'}
+          </p>
+          {ketKeluar && (
+            <p className={`text-[10px] mt-1 font-medium ${ketKeluar.warna === 'normal' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}`}>
+              {ketKeluar.detail}
+            </p>
           )}
         </div>
       </div>
-    </main>
+
+      {/* Riwayat */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-slate-800 dark:text-slate-100 font-bold flex items-center gap-2">
+            <span>🕐</span> Riwayat Hari Ini
+          </h2>
+          {todayLogs.length > 0 && (
+            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-full font-medium transition-colors">
+              {todayLogs.length} catatan
+            </span>
+          )}
+        </div>
+
+        {todayLogs.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-5xl mb-3 opacity-40">📭</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Belum ada absensi hari ini</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {todayLogs.map((log) => {
+              const info = getTipeLabel(log.tipe)
+              const ket = log.tipe === 'masuk' ? getKeteranganMasuk(log) :
+                          log.tipe === 'keluar' ? getKeteranganKeluar(log) :
+                          cekStatusIstirahatDinamis(new Date(log.waktu_absen))
+
+              return (
+                <div key={log.id} className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-4 transition">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md bg-gradient-to-br ${info.bg}`}>
+                        <span className="text-white font-bold text-lg">{info.icon}</span>
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-sm ${info.color}`}>
+                          {info.label}
+                          {log.is_terlambat && (
+                            <span className="ml-2 text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 px-2 py-0.5 rounded-full font-bold transition-colors">
+                              MENYUSUL
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {new Date(log.waktu_absen).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Makassar' })}
+                        </p>
+                        {ket && 'detail' in ket && (
+                          <p className={`text-[10px] mt-0.5 font-medium ${
+                            ket.warna === 'terlambat' ? 'text-amber-600 dark:text-amber-400'
+                            : ket.warna === 'pulang_cepat' ? 'text-orange-600 dark:text-orange-400'
+                            : ket.warna === 'menyusul' ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            {ket.detail}
+                          </p>
+                        )}
+                        {ket && 'status' in ket && ket.status === 'terlambat' && (
+                          <p className="text-[10px] mt-0.5 font-medium text-amber-600 dark:text-amber-400">
+                            Terlambat {ket.menit} menit
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`text-lg font-bold font-mono ${info.color}`}>
+                      {new Date(log.waktu_absen).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Makassar' })}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
