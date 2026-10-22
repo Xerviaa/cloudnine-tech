@@ -478,8 +478,18 @@ export default function AdminPage() {
               <p className="text-slate-500 text-xs">Panel Admin</p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
+            {/* ============================================================ */}
+            {/* TOMBOL KELOLA JADWAL BARU */}
+            {/* ============================================================ */}
+            <Link
+              href="/admin/jadwal"
+              className="text-slate-700 hover:text-indigo-700 text-sm bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 px-4 py-2 rounded-lg transition font-medium inline-flex items-center gap-2"
+            >
+              <span>📅</span>
+              <span className="hidden sm:inline">Kelola Jadwal</span>
+            </Link>
+
             {/* ============================================================ */}
             {/* TAMBAHAN: Tombol Kelola Izin & Cuti dengan badge notifikasi */}
             {/* ============================================================ */}

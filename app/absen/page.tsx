@@ -351,7 +351,7 @@ export default function AbsenPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* BANNER AJUKAN IZIN (Besar & Mencolok)                         */}
+        {/* BANNER AJUKAN IZIN                                           */}
         {/* ============================================================ */}
         <Link
           href="/izin"
